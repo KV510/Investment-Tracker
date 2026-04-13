@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<meta name="theme-color" content="#1a1a18" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Investments" />
+<meta name="description" content="Monthly investment tracker with Google Sheets sync" />
+<title>Investment Tracker</title>
+
+<!-- PWA Manifest injected inline via JS blob -->
+<script>
+(function() {
+  const icon = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='100' fill='%231a1a18'/><text x='256' y='340' font-size='260' text-anchor='middle' font-family='system-ui,sans-serif' fill='%23f0f0ec'>₹</text></svg>`;
+  const iconUrl = 'data:image/svg+xml,' + icon;
+  const manifest = {
+    name: "Investment Tracker",
+    short_name: "Investments",
+    description: "Monthly investment log with Google Sheets sync",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#ffffff",
+    theme_color: "#1a1a18",
+    orientation: "portrait",
+    icons: [
+      { src: iconUrl, sizes: "192x192", type: "image/svg+xml", purpose: "any maskable" },
+      { src: iconUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = url;
+  document.currentScript.parentNode.appendChild(link);
+
+  // Apple touch icon
+  const appleIcon = document.createElement('link');
+  appleIcon.rel = 'apple-touch-icon';
+  appleIcon.href = iconUrl;
+  document.currentScript.parentNode.appendChild(appleIcon);
+})();
+</script>
+
+<style>
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #ededea;
+    --text: #1a1a18; --text2: #6b6b67; --text3: #a0a09b;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --green: #1d9e75; --green-bg: #e1f5ee;
+    --red: #e24b4a; --red-bg: #fcebeb;
+    --amber: #ba7517; --amber-bg: #faeeda;
+    --blue: #185fa5; --blue-bg: #e6f1fb;
+    --radius: 10px; --radius-sm: 7px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+      --text: #f0f0ec; --text2: #a0a09b; --text3: #6b6b67;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --green: #5dcaa5; --green-bg: #085041;
+      --red: #f09595; --red-bg: #501313;
+      --amber: #ef9f27; --amber-bg: #412402;
+      --blue: #85b7eb; --blue-bg: #042c53;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; min-height: 100vh; }
+
+  /* Install banner */
+  #install-banner { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 999; background: var(--text); color: var(--bg); padding: 14px 16px; align-items: center; justify-content: space-between; gap: 10px; }
+  #install-banner p { font-size: 13px; line-height: 1.4; flex: 1; }
+  #install-banner strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .install-btn { background: var(--bg); color: var(--text); border: none; border-radius: var(--radius-sm); padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .dismiss-btn { background: none; border: none; color: var(--bg); font-size: 20px; cursor: pointer; opacity: 0.6; padding: 0 4px; }
+
+  .topbar { position: sticky; top: 0; z-index: 100; background: var(--bg); border-bottom: 0.5px solid var(--border); padding: 14px 16px 10px; }
+  .topbar h1 { font-size: 20px; font-weight: 600; }
+  .topbar p { font-size: 12px; color: var(--text2); margin-top: 1px; }
+  .tabbar { display: flex; background: var(--bg2); border-radius: var(--radius); margin: 10px 16px; padding: 3px; gap: 2px; }
+  .tab { flex: 1; text-align: center; padding: 8px 4px; font-size: 13px; font-weight: 500; border-radius: 8px; border: none; background: none; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .tab.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+  .section { padding: 0 16px 100px; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; }
+  .card-title { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 12px; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--text2); margin-bottom: 5px; }
+  .field input, .field select { width: 100%; padding: 11px 12px; font-size: 15px; background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); color: var(--text); appearance: none; -webkit-appearance: none; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--border2); background: var(--bg); }
+  .field .hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .inv-item { border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; background: var(--bg2); }
+  .inv-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .inv-num { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+  .del-btn { background: none; border: none; font-size: 20px; color: var(--text3); cursor: pointer; line-height: 1; padding: 0 2px; }
+  .del-btn:active { color: var(--red); }
+  .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .metric { background: var(--bg2); border-radius: var(--radius-sm); padding: 12px; }
+  .metric-label { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+  .metric-value { font-size: 20px; font-weight: 600; color: var(--text); }
+  .metric-value.full { font-size: 14px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 13px; font-size: 15px; font-weight: 600; border-radius: var(--radius-sm); border: 0.5px solid var(--border2); background: none; color: var(--text); cursor: pointer; margin-bottom: 8px; transition: opacity 0.15s; }
+  .btn:active { opacity: 0.7; transform: scale(0.99); }
+  .btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn-add { border-style: dashed; color: var(--text2); }
+  .btn-danger { color: var(--red); border-color: var(--red); }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 99px; }
+  .badge-ok { background: var(--green-bg); color: var(--green); }
+  .badge-err { background: var(--red-bg); color: var(--red); }
+  .badge-warn { background: var(--amber-bg); color: var(--amber); }
+  .log { font-size: 12px; color: var(--text2); background: var(--bg2); border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; white-space: pre-wrap; line-height: 1.5; }
+  .hist-entry { border-bottom: 0.5px solid var(--border); padding: 12px 0; }
+  .hist-entry:last-child { border-bottom: none; }
+  .hist-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .hist-month { font-weight: 600; font-size: 15px; }
+  .hist-date { font-size: 11px; color: var(--text3); }
+  .hist-row { display: flex; justify-content: space-between; font-size: 13px; color: var(--text2); padding: 2px 0; }
+  .hist-amount { font-weight: 500; color: var(--text); }
+  .type-pill { font-size: 10px; background: var(--bg3); color: var(--text2); padding: 1px 7px; border-radius: 99px; margin-left: 5px; }
+  .sheet-table { width: 100%; border-collapse: collapse; font-size: 12px; overflow-x: auto; display: block; }
+  .sheet-table th, .sheet-table td { padding: 7px 9px; border: 0.5px solid var(--border); text-align: left; white-space: nowrap; }
+  .sheet-table th { background: var(--bg2); font-weight: 600; color: var(--text2); }
+  .sheet-table td { color: var(--text2); }
+  .empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+  .divider { height: 0.5px; background: var(--border); margin: 12px 0; }
+</style>
+</head>
+<body>
+
+<!-- Install to Home Screen banner (Android Chrome) -->
+<div id="install-banner">
+  <p><strong>Add to Home Screen</strong>Install this app for quick access</p>
+  <button class="install-btn" id="install-btn">Install</button>
+  <button class="dismiss-btn" onclick="dismissBanner()">×</button>
+</div>
+
+<div class="topbar">
+  <h1>Investment Tracker</h1>
+  <p>Monthly portfolio log · Google Sheets sync</p>
+</div>
+
+<div class="tabbar">
+  <button class="tab active" onclick="switchTab('entry')">Entry</button>
+  <button class="tab" onclick="switchTab('setup')">Setup</button>
+  <button class="tab" onclick="switchTab('history')">History</button>
+</div>
+
+<!-- ENTRY TAB -->
+<div id="tab-entry" class="section">
+  <div class="card">
+    <div class="card-title">Period</div>
+    <div class="row2">
+      <div class="field"><label>Month</label><select id="entry-month"></select></div>
+      <div class="field"><label>Year</label><input type="number" id="entry-year" min="2020" max="2040" /></div>
+    </div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Total invested</div><div class="metric-value" id="m-total">₹0</div></div>
+    <div class="metric"><div class="metric-label">Holdings</div><div class="metric-value" id="m-count">0</div></div>
+    <div class="metric" style="grid-column:1/-1"><div class="metric-label">Best performer</div><div class="metric-value full" id="m-best">–</div></div>
+  </div>
+
+  <div id="investment-rows"></div>
+  <button class="btn btn-add" onclick="addRow()">+ Add investment</button>
+  <div class="divider"></div>
+  <button class="btn" onclick="saveDraft()">Save draft</button>
+  <button class="btn btn-primary" onclick="syncToSheets()">Sync to Google Sheets →</button>
+  <div id="sync-status-wrap" style="margin-top:6px;display:none"><span id="sync-badge"></span></div>
+  <div id="sync-log" class="log" style="display:none"></div>
+</div>
+
+<!-- SETUP TAB -->
+<div id="tab-setup" class="section" style="display:none">
+  <div class="card">
+    <div class="card-title">Google Sheets configuration</div>
+    <div class="field">
+      <label>Spreadsheet ID</label>
+      <input type="text" id="sheet-id" placeholder="1BxiMVs0XRA5nFMdK..." />
+      <div class="hint">From the URL: docs.google.com/spreadsheets/d/<strong>ID</strong>/edit</div>
+    </div>
+    <div class="field">
+      <label>OAuth 2.0 Access Token</label>
+      <input type="password" id="api-key" placeholder="ya29.a0..." />
+      <div class="hint">Get from OAuth Playground. Required for write access.</div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Sheet tab name</label><input type="text" id="sheet-name" value="Investments" /></div>
+      <div class="field"><label>Header row</label><input type="number" id="start-row" value="1" min="1" /></div>
+    </div>
+    <button class="btn btn-primary" onclick="saveConfig()" style="margin-top:4px">Save configuration</button>
+    <button class="btn" onclick="testConnection()">Test connection</button>
+    <div id="config-status-wrap" style="margin-top:6px;display:none"><span id="config-badge"></span></div>
+    <div id="config-log" class="log" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">How to get an OAuth token</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:10px">1. Open OAuth Playground (link below)<br>2. Select Sheets API v4 scope<br>3. Authorize &amp; exchange code for tokens<br>4. Copy the <strong>Access Token</strong></p>
+    <button class="btn" onclick="window.open('https://developers.google.com/oauthplayground','_blank')" style="color:var(--blue);border-color:var(--blue)">Open OAuth Playground →</button>
+    <p style="font-size:11px;color:var(--text3);margin-top:6px">Tokens expire after ~1 hour. For permanent access, set up a service account.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Required sheet columns (row 1)</div>
+    <div style="overflow-x:auto">
+      <table class="sheet-table">
+        <thead><tr><th>A</th><th>B</th><th>C</th><th>D</th><th>E</th><th>F</th><th>G</th></tr></thead>
+        <tbody><tr><td>Month</td><td>Year</td><td>Name</td><td>Type</td><td>Amount</td><td>Return %</td><td>Date Added</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY TAB -->
+<div id="tab-history" class="section" style="display:none">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <span class="card-title" style="margin:0">Synced entries</span>
+      <button class="btn btn-danger" onclick="clearHistory()" style="width:auto;padding:6px 12px;font-size:13px;margin:0">Clear</button>
+    </div>
+    <div id="history-list"><div class="empty">No entries synced yet.</div></div>
+  </div>
+</div>
+
+<script>
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const TYPES = ['Mutual Fund','Stock','FD','PPF','NPS','Gold','Real Estate','Crypto','ELSS','Bonds','ETF','SIP','Other'];
+let investments = [], config = {}, history = [];
+let deferredPrompt = null;
+
+// PWA install prompt
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('install-banner').style.display = 'flex';
+});
+
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('install-banner').style.display = 'none';
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-banner').style.display = 'none';
+});
+
+function dismissBanner() { document.getElementById('install-banner').style.display = 'none'; }
+
+// Register inline service worker for offline support
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'inv-tracker-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./index.html'))));
+    });
+  `;
+  const swBlob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl, { scope: './' }).catch(() => {});
+}
+
+function init() {
+  const sel = document.getElementById('entry-month');
+  MONTHS.forEach(m => { const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o); });
+  const now = new Date();
+  sel.value = MONTHS[now.getMonth()];
+  document.getElementById('entry-year').value = now.getFullYear();
+  try { config = JSON.parse(localStorage.getItem('inv_config') || '{}'); } catch(e) {}
+  if (config.sheetId) document.getElementById('sheet-id').value = config.sheetId;
+  if (config.apiKey) document.getElementById('api-key').value = config.apiKey;
+  if (config.sheetName) document.getElementById('sheet-name').value = config.sheetName;
+  if (config.startRow) document.getElementById('start-row').value = config.startRow;
+  try { history = JSON.parse(localStorage.getItem('inv_history') || '[]'); } catch(e) {}
+  try {
+    const draft = JSON.parse(localStorage.getItem('inv_draft') || 'null');
+    if (draft && draft.investments) investments = draft.investments;
+  } catch(e) {}
+  if (investments.length === 0) addRow(); else renderRows();
+}
+
+function switchTab(tab) {
+  ['entry','setup','history'].forEach(t => { document.getElementById('tab-'+t).style.display = t === tab ? '' : 'none'; });
+  document.querySelectorAll('.tab').forEach((el, i) => { el.classList.toggle('active', ['entry','setup','history'][i] === tab); });
+  if (tab === 'history') renderHistory();
+}
+
+function addRow() {
+  investments.push({ id: Date.now(), name:'', type:'Mutual Fund', amount:'', ret:'' });
+  renderRows();
+}
+
+function renderRows() {
+  const c = document.getElementById('investment-rows');
+  c.innerHTML = '';
+  investments.forEach((inv, i) => {
+    const d = document.createElement('div');
+    d.className = 'inv-item';
+    d.innerHTML = `
+      <div class="inv-item-header">
+        <span class="inv-num">Investment ${i+1}</span>
+        <button class="del-btn" onclick="removeRow(${inv.id})">×</button>
+      </div>
+      <div class="field"><label>Name / Asset</label>
+        <input type="text" value="${inv.name}" placeholder="e.g. HDFC Nifty 50 Index" oninput="upd(${inv.id},'name',this.value)" /></div>
+      <div class="row2">
+        <div class="field"><label>Type</label>
+          <select onchange="upd(${inv.id},'type',this.value)">${TYPES.map(t=>`<option ${t===inv.type?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="field"><label>Amount (₹)</label>
+          <input type="number" value="${inv.amount}" placeholder="0" oninput="upd(${inv.id},'amount',this.value)" /></div>
+      </div>
+      <div class="field"><label>Monthly return / gain (%)</label>
+        <input type="number" value="${inv.ret}" placeholder="0.0" step="0.1" oninput="upd(${inv.id},'ret',this.value)" /></div>
+    `;
+    c.appendChild(d);
+  });
+  updateMetrics();
+}
+
+function upd(id, field, val) {
+  const inv = investments.find(i => i.id === id);
+  if (inv) { inv[field] = val; updateMetrics(); }
+}
+
+function removeRow(id) {
+  investments = investments.filter(i => i.id !== id);
+  if (investments.length === 0) addRow(); else renderRows();
+}
+
+function updateMetrics() {
+  const total = investments.reduce((s,i) => s + (parseFloat(i.amount)||0), 0);
+  document.getElementById('m-total').textContent = '₹' + total.toLocaleString('en-IN');
+  document.getElementById('m-count').textContent = investments.filter(i=>i.name.trim()).length;
+  const best = investments.filter(i=>i.ret!=='').sort((a,b)=>(parseFloat(b.ret)||0)-(parseFloat(a.ret)||0))[0];
+  document.getElementById('m-best').textContent = best && best.name ? `${best.name} (${best.ret}%)` : '–';
+}
+
+function saveDraft() {
+  localStorage.setItem('inv_draft', JSON.stringify({ month: document.getElementById('entry-month').value, year: document.getElementById('entry-year').value, investments }));
+  showBadge('sync-badge','sync-status-wrap','Draft saved','warn');
+}
+
+async function syncToSheets() {
+  const sheetId = document.getElementById('sheet-id').value || config.sheetId;
+  const apiKey = document.getElementById('api-key').value || config.apiKey;
+  const sheetName = document.getElementById('sheet-name').value || config.sheetName || 'Investments';
+  if (!sheetId || !apiKey) { showBadge('sync-badge','sync-status-wrap','Configure Sheets in Setup tab first','err'); showLog('sync-log','Go to Setup tab and enter your Spreadsheet ID and OAuth token.'); return; }
+  const month = document.getElementById('entry-month').value;
+  const year = document.getElementById('entry-year').value;
+  const filled = investments.filter(i => i.name.trim() && i.amount);
+  if (filled.length === 0) { showBadge('sync-badge','sync-status-wrap','No investments to sync','err'); return; }
+  showBadge('sync-badge','sync-status-wrap','Syncing…','warn');
+  showLog('sync-log', `Sending ${filled.length} row(s) to "${sheetName}"…`);
+  const today = new Date().toLocaleDateString('en-IN');
+  const values = filled.map(inv => [month, year, inv.name, inv.type, parseFloat(inv.amount)||0, parseFloat(inv.ret)||0, today]);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${encodeURIComponent(sheetName)}!A:G:append?valueInputOption=USER_ENTERED`;
+  try {
+    const res = await fetch(url, { method:'POST', headers:{'Authorization':`Bearer ${apiKey}`,'Content-Type':'application/json'}, body:JSON.stringify({values}) });
+    const data = await res.json();
+    if (data.error) {
+      showBadge('sync-badge','sync-status-wrap','Sync failed','err');
+      showLog('sync-log','Error: ' + data.error.message + '\n\nUse an OAuth token (ya29...), not just an API key.');
+    } else {
+      showBadge('sync-badge','sync-status-wrap',`${filled.length} rows synced!`,'ok');
+      showLog('sync-log', `✓ ${filled.length} investments added to "${sheetName}" for ${month} ${year}.`);
+      history.unshift({ month, year, investments:[...filled], syncedAt:new Date().toLocaleString('en-IN') });
+      localStorage.setItem('inv_history', JSON.stringify(history.slice(0,50)));
+      localStorage.removeItem('inv_draft');
+      investments = []; addRow();
+    }
+  } catch(e) { showBadge('sync-badge','sync-status-wrap','Network error','err'); showLog('sync-log','Network error: '+e.message); }
+}
+
+async function testConnection() {
+  const sheetId = document.getElementById('sheet-id').value;
+  const apiKey = document.getElementById('api-key').value;
+  if (!sheetId || !apiKey) { showBadge('config-badge','config-status-wrap','Fill in both fields','err'); return; }
+  showBadge('config-badge','config-status-wrap','Testing…','warn');
+  try {
+    const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}`, { headers:{'Authorization':`Bearer ${apiKey}`} });
+    const data = await res.json();
+    if (data.error) { showBadge('config-badge','config-status-wrap','Failed','err'); showLog('config-log',data.error.message); }
+    else { showBadge('config-badge','config-status-wrap','Connected: '+data.properties.title,'ok'); showLog('config-log','Spreadsheet: "'+data.properties.title+'"\nTabs: '+data.sheets.map(s=>s.properties.title).join(', ')); }
+  } catch(e) { showBadge('config-badge','config-status-wrap','Error','err'); showLog('config-log',e.message); }
+}
+
+function saveConfig() {
+  config = { sheetId:document.getElementById('sheet-id').value, apiKey:document.getElementById('api-key').value, sheetName:document.getElementById('sheet-name').value, startRow:document.getElementById('start-row').value };
+  localStorage.setItem('inv_config', JSON.stringify(config));
+  showBadge('config-badge','config-status-wrap','Configuration saved','ok');
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!history.length) { el.innerHTML = '<div class="empty">No entries synced yet.</div>'; return; }
+  el.innerHTML = history.map(h => `
+    <div class="hist-entry">
+      <div class="hist-header"><span class="hist-month">${h.month} ${h.year}</span><span class="hist-date">${h.syncedAt}</span></div>
+      ${h.investments.map(i=>`<div class="hist-row"><span>${i.name}<span class="type-pill">${i.type}</span></span><span class="hist-amount">₹${parseFloat(i.amount).toLocaleString('en-IN')}</span></div>`).join('')}
+      <div style="font-size:12px;color:var(--text2);margin-top:6px;font-weight:500">Total: ₹${h.investments.reduce((s,i)=>s+(parseFloat(i.amount)||0),0).toLocaleString('en-IN')}</div>
+    </div>`).join('');
+}
+
+function clearHistory() {
+  if (confirm('Clear all history?')) { history=[]; localStorage.removeItem('inv_history'); renderHistory(); }
+}
+
+function showBadge(badgeId, wrapId, msg, type) {
+  document.getElementById(wrapId).style.display='';
+  const b = document.getElementById(badgeId);
+  b.className = 'badge ' + (type==='ok'?'badge-ok':type==='err'?'badge-err':'badge-warn');
+  b.textContent = msg;
+}
+
+function showLog(id, msg) { const el=document.getElementById(id); el.style.display=''; el.textContent=msg; }
+
+init();
+</script>
+</body>
+</html>
