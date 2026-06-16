@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>test</title>
+<title>Meelkazhani Silambam Academy</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -21,6 +21,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Cloudflare Turnstile CAPTCHA -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <!-- Supabase Client -->
 <script type="module">
   import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -42,8 +44,8 @@
   window._sb = supabase;
 
   // Auth helpers — mirror the old Firebase function names so the rest of the app keeps working
-  window._fbSignIn = (email, password) =>
-    supabase.auth.signInWithPassword({ email, password });
+  window._fbSignIn = (email, password, captchaToken) =>
+    supabase.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : {} });
   window._fbSignOut = () => supabase.auth.signOut();
   window._onAuthStateChanged = (cb) => {
     supabase.auth.getSession().then(({ data }) => cb(data.session ? data.session.user : null));
@@ -90,12 +92,12 @@ input,select,textarea{font-family:var(--font);}
 /* LOGIN */
 #loginScreen{position:fixed;inset:0;background:linear-gradient(180deg,#0f1f3d 0%,#0a1628 100%);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;overflow:hidden;}
 .meteor{position:absolute;width:4px;height:4px;background:#fff;border-radius:50%;box-shadow:0 0 10px 2px rgba(255,255,255,.9);opacity:0;z-index:0;pointer-events:none;}
-.meteor.m1{top:-5%;right:-5%;animation:meteorFall 5.5s linear infinite;animation-delay:0s;}
-.meteor.m2{top:-5%;right:20%;animation:meteorFall 7s linear infinite;animation-delay:2.4s;}
-.meteor.m3{top:-5%;right:40%;animation:meteorFall 6s linear infinite;animation-delay:4s;}
-.meteor.m4{top:-5%;right:-15%;animation:meteorFall 8s linear infinite;animation-delay:1.2s;}
-.meteor.m5{top:-5%;right:60%;animation:meteorFall 6.5s linear infinite;animation-delay:5.2s;}
-@keyframes meteorFall{0%{opacity:0;transform:translate(0,0);}8%{opacity:.95;}92%{opacity:.95;}100%{opacity:0;transform:translate(-90vw,100vh);}}
+.meteor.m1{bottom:-5%;left:-5%;animation:meteorFall 5.5s linear infinite;animation-delay:0s;}
+.meteor.m2{bottom:-5%;left:20%;animation:meteorFall 7s linear infinite;animation-delay:2.4s;}
+.meteor.m3{bottom:-5%;left:40%;animation:meteorFall 6s linear infinite;animation-delay:4s;}
+.meteor.m4{bottom:-5%;left:-15%;animation:meteorFall 8s linear infinite;animation-delay:1.2s;}
+.meteor.m5{bottom:-5%;left:60%;animation:meteorFall 6.5s linear infinite;animation-delay:5.2s;}
+@keyframes meteorFall{0%{opacity:0;transform:translate(0,0);}8%{opacity:.95;}92%{opacity:.95;}100%{opacity:0;transform:translate(90vw,-100vh);}}
 .star{position:absolute;background:#fff;border-radius:50%;z-index:0;pointer-events:none;animation:twinkle ease-in-out infinite;}
 @keyframes twinkle{0%,100%{opacity:.15;transform:scale(.7);}50%{opacity:.9;transform:scale(1.1);}}
 #loginScene{display:none;}
@@ -432,6 +434,10 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         <button type="button" class="login-eye" onclick="toggleLoginPass()" title="Show/hide password"><svg viewBox="0 0 24 24" fill="none" stroke="#e8392f" stroke-width="2" width="17" height="17"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
     </div>
+    <!-- Cloudflare Turnstile CAPTCHA (bot protection) -->
+    <div id="turnstileWidget" class="cf-turnstile" data-sitekey="0x4AAAAAADl5-__bpO6ektL1"
+         data-callback="onTurnstileSuccess" data-expired-callback="onTurnstileExpired"
+         style="margin:10px 0;display:flex;justify-content:center;"></div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()">Sign In to Portal</button>
     <div class="login-support" id="loginSupport"></div>
   </div>
@@ -481,7 +487,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
     <div class="topbar-left">
       <div class="logo-img" id="topLogo" onclick="if(isAdmin())switchPage('profile')" style="cursor:pointer;" title="Go to Profile (Admin)">⚔️</div>
       <div>
-        <div class="academy-name" id="topAcadName">MEELKAZHANI SILAMBAM</div>
+        <div class="academy-name" id="topAcadName">Academy</div>
         <div class="academy-sub" id="topRoleBadge">Admin</div>
         <div style="font-size:10px;color:var(--gold);font-weight:600;line-height:1;" id="topUserName"></div>
       </div>
@@ -912,7 +918,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         <div style="display:flex;align-items:center;gap:12px;">
           <div class="logo-img" id="profileLogo" style="width:60px;height:60px;font-size:26px;flex-shrink:0;">⚔️</div>
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:700;font-size:15px;line-height:1.3;" id="profileAcadName">MEELKAZHANI SILAMBAM ACADEMY</div>
+            <div style="font-weight:700;font-size:15px;line-height:1.3;" id="profileAcadName">Academy</div>
             <div style="font-size:12px;color:var(--gray);margin-top:2px;" id="profileEmail"></div>
             <div style="font-size:12px;color:var(--gray);" id="profilePhone"></div>
             <div style="font-size:11px;color:var(--graydk);margin-top:1px;" id="profileTagline"></div>
@@ -991,6 +997,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
       <div class="card admin-only" id="userCard">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
           <div class="section-title" style="margin-bottom:0;font-size:12px;">🔑 User Management</div>
+          <button class="btn btn-primary btn-xs" onclick="openAddUserModal('staff')">+ Add Staff</button>
         </div>
         <div id="userListWrap"></div>
       </div>
@@ -1111,6 +1118,25 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
 </div><!-- end #app -->
 
 <!-- ===== MODALS ===== -->
+
+<!-- CHANGE MY PASSWORD -->
+<div class="modal-overlay" id="modalMyPass">
+  <div class="modal">
+    <div class="modal-title"><span>🔑 Change My Password</span><button class="modal-close" onclick="closeModal('modalMyPass')">×</button></div>
+    <div class="form-group"><label class="form-label">New Password <span style="color:var(--gray);font-size:10px;">(min 6 characters)</span></label><input type="password" class="form-input" id="myPassNew" placeholder="Enter new password"></div>
+    <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" class="form-input" id="myPassConfirm" placeholder="Re-enter new password"></div>
+    <div id="myPassError" style="display:none;color:var(--red);font-size:12px;margin-bottom:10px;"></div>
+    <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="doChangeMyPassword()">💾 Update Password</button>
+  </div>
+</div>
+
+<!-- STUDENT DETAIL POPUP -->
+<div class="modal-overlay" id="modalStudentDetail">
+  <div class="modal">
+    <div class="modal-title"><span>👤 Student Details</span><button class="modal-close" onclick="closeModal('modalStudentDetail')">×</button></div>
+    <div id="studentDetailBody"></div>
+  </div>
+</div>
 
 <!-- ADD / EDIT STUDENT -->
 <div class="modal-overlay" id="modalStudent">
@@ -1247,9 +1273,9 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
     <div class="form-group"><label class="form-label">Password * <span style="color:var(--gray);font-size:10px;">(min 6 characters)</span></label><input type="password" class="form-input" id="newUserPass" placeholder="Set login password"></div>
     <div class="form-group"><label class="form-label">Role</label>
       <select class="form-select" id="newUserRole" onchange="toggleBatchAssignField()">
-        <option value="admin">Admin</option>
         <option value="staff">Staff</option>
       </select>
+      <div style="font-size:10px;color:var(--gray);margin-top:4px;">New accounts are created as Staff. Admin access is managed by the account owner.</div>
     </div>
     <div id="batchAssignGroup" style="display:none;">
       <label class="form-label">Assigned Batches <span style="color:var(--gray);font-size:10px;">(staff sees only these)</span></label>
@@ -1403,6 +1429,12 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         <span style="font-size:13px;font-weight:600;color:var(--offwhite);">Theme</span>
         <button class="btn btn-outline btn-sm" id="themeToggleBtn" onclick="toggleTheme()" title="Switch theme">🌙 Dark</button>
       </div>
+    </div>
+
+    <!-- Account — all users -->
+    <div style="margin-bottom:16px;">
+      <div class="section-title" style="font-size:13px;margin-bottom:8px;">🔐 Account</div>
+      <button class="btn btn-outline btn-sm" style="width:100%;" onclick="openMyPassModal()">🔑 Change My Password</button>
     </div>
 
     <!-- Firebase Sync section removed — app now uses Supabase with realtime sync -->
@@ -1611,7 +1643,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
 // DATABASE
 // ================================================================
 let DB = {
-  settings: { academyName:'MEELKAZHANI SILAMBAM ACADEMY', logoUrl:'', email:'', phone:'', tagline:'', loginBgUrl:'', loginSupport:'', firebaseUrl:'', lastPush:'', lastPushBy:'', msgTemplate:'Dear {name}, your fee for {month} is pending at {academy}. Kindly pay at the earliest. Thank you.' },
+  settings: { academyName:'Academy', logoUrl:'', email:'', phone:'', tagline:'', loginBgUrl:'', loginSupport:'', firebaseUrl:'', lastPush:'', lastPushBy:'', msgTemplate:'Dear {name}, your fee for {month} is pending at {academy}. Kindly pay at the earliest. Thank you.' },
   users: [
     { id:'admin', email:'admin@youracademy.com', name:'Admin', role:'admin' },
     { id:'staff1', email:'staff1@youracademy.com', name:'Staff 1', role:'staff' }
@@ -1630,6 +1662,15 @@ let DB = {
 
 let currentUser = null;
 let _appLaunched = false; // guard: only auto-launch the app once
+
+// ── Cloudflare Turnstile CAPTCHA state + callbacks ──
+let _turnstileToken = '';
+function onTurnstileSuccess(token) { _turnstileToken = token; }
+function onTurnstileExpired() { _turnstileToken = ''; }
+function _resetTurnstile() {
+  _turnstileToken = '';
+  try { if (window.turnstile) window.turnstile.reset(); } catch(e) {}
+}
 let _currentAcademyId = null;  // set on login — scopes all Supabase queries to this academy
 let currentPage = 'home';
 let editStudId = null;
@@ -2132,7 +2173,7 @@ async function takeSnapshot(label) {
   } catch(e) { console.error('Snapshot failed:',e); return null; }
 }
 function checkMidnightSnapshot() {
-  if (!currentUser || !isAdmin() || !fbDb) return;
+  if (!currentUser || !isAdmin()) return;
   const todayKey = snapDateKey();
   const done = Array.isArray(DB.snapshotIndex) && DB.snapshotIndex.some(s => s.key === todayKey);
   if (!done) {
@@ -2476,15 +2517,22 @@ async function doLogin() {
     showLoginError('Please enter both User ID and Password.');
     return;
   }
+  // Require the CAPTCHA to be solved
+  if (!_turnstileToken) {
+    showLoginError('Please complete the "I\'m not a robot" check below.');
+    return;
+  }
 
   const btn = document.getElementById('loginBtn');
   btn.textContent = 'Checking...';
   btn.disabled = true;
 
   try {
-    // Step 1: Sign in with Supabase Auth
+    // Step 1: Sign in with Supabase Auth (with CAPTCHA token)
     if (!window._fbSignIn) throw new Error('Supabase not loaded yet. Please refresh.');
-    const { data: signInData, error: signInErr } = await window._fbSignIn(email, pw);
+    const { data: signInData, error: signInErr } = await window._fbSignIn(email, pw, _turnstileToken);
+    // Reset the CAPTCHA after each attempt (tokens are single-use)
+    _resetTurnstile();
     if (signInErr) {
       // Normalize Supabase auth errors into the codes the catch block expects
       const msg = (signInErr.message || '').toLowerCase();
@@ -2694,6 +2742,33 @@ function showChangePassScreen() {
   document.getElementById('changePassScreen').style.display = 'flex';
 }
 
+function openMyPassModal() {
+  closeModal('modalSettings');
+  document.getElementById('myPassNew').value = '';
+  document.getElementById('myPassConfirm').value = '';
+  const err = document.getElementById('myPassError');
+  if (err) err.style.display = 'none';
+  openModal('modalMyPass');
+}
+
+async function doChangeMyPassword() {
+  const np = document.getElementById('myPassNew').value;
+  const cp = document.getElementById('myPassConfirm').value;
+  const err = document.getElementById('myPassError');
+  const showErr = (m) => { if (err) { err.textContent = m; err.style.display = ''; } };
+  if (!np || np.length < 6) { showErr('Password must be at least 6 characters.'); return; }
+  if (np !== cp) { showErr('Passwords do not match.'); return; }
+  try {
+    const { error } = await window._sb.auth.updateUser({ password: np });
+    if (error) throw error;
+    addLog('user', 'Changed own password');
+    closeModal('modalMyPass');
+    showToast('Password updated ✓', 'success');
+  } catch(e) {
+    showErr(e.message || 'Could not update password.');
+  }
+}
+
 async function doChangePass() {
   const np = document.getElementById('chPassNew').value;
   const cp = document.getElementById('chPassConfirm').value;
@@ -2708,20 +2783,14 @@ async function doChangePass() {
     errEl.classList.add('show'); return;
   }
   try {
-    // Update password via Firebase Auth
-    const firebaseUser = window._fbAuth && window._fbAuth.currentUser;
-    if (firebaseUser) {
-      const { updatePassword } = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js');
-      await updatePassword(firebaseUser, np);
-    }
-    // Remove mustChangePass flag from app DB
+    // Update the logged-in user's own password via Supabase Auth
+    const { error } = await window._sb.auth.updateUser({ password: np });
+    if (error) throw error;
     const idx = DB.users.findIndex(u => u.id === currentUser.id);
     if (idx >= 0) {
       delete DB.users[idx].mustChangePass;
-      delete DB.users[idx].password; // no longer storing passwords in DB
       currentUser = DB.users[idx];
     }
-    try { localStorage.setItem('sac_session', JSON.stringify({ email: currentUser.email || currentUser.id })); } catch(e) {}
     addLog('user', 'Password changed on first login');
     document.getElementById('changePassScreen').style.display = 'none';
     launchApp();
@@ -2876,33 +2945,6 @@ let lastKnownDB = null;
 // to the cloud during the brief window between login and the pull finishing,
 // which would wipe all data for everyone else.
 let hasLoadedRemote = false;
-
-function fbBaseUrl() {
-  const url = window._fbDatabaseURL || DB.settings.firebaseUrl || '';
-  return url.replace(/\/$/, '');
-}
-
-async function fbRestUrl(path) {
-  let token = '';
-  try {
-    const user = window._fbAuth && window._fbAuth.currentUser;
-    if (user) token = await user.getIdToken();
-  } catch(e) {}
-  const sep = path.includes('?') ? '&' : '?';
-  return fbBaseUrl() + path + '.json' + (token ? sep + 'auth=' + encodeURIComponent(token) : '');
-}
-
-// Build headers including the App Check token (if available)
-async function fbHeaders(extra) {
-  const headers = Object.assign({}, extra || {});
-  try {
-    if (window._fbGetAppCheckToken) {
-      const acToken = await window._fbGetAppCheckToken();
-      if (acToken) headers['X-Firebase-AppCheck'] = acToken;
-    }
-  } catch(e) {}
-  return headers;
-}
 
 // ============================================================
 // SUPABASE DATA LAYER
@@ -3543,309 +3585,10 @@ function _toDateOrNull(v) {
   return null;
 }
 
-// GET — fetch data from Firebase REST
-async function fbGet(path) {
-  const url = await fbRestUrl(path);
-  const headers = await fbHeaders();
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error('Firebase GET failed: ' + res.status);
-  return res.json();
-}
+// ---- Legacy Firebase data-layer removed (app now uses Supabase) ----
+// Kept as a harmless no-op because an old comment references it.
+function scheduleFirebasePush() { /* no-op: writes go directly to Supabase */ }
 
-// PUT — write data to Firebase REST
-async function fbPut(path, data) {
-  const url = await fbRestUrl(path);
-  const headers = await fbHeaders({ 'Content-Type': 'application/json' });
-  const res = await fetch(url, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(data)
-  });
-  if (!res.ok) throw new Error('Firebase PUT failed: ' + res.status);
-  return res.json();
-}
-
-function initFirebase() {
-  const url = fbBaseUrl();
-  if (!url) return Promise.resolve();
-
-  fbDb = true;
-  hasLoadedRemote = false; // block any push until the pull below completes
-  const el = document.getElementById('fbStatus');
-  if (el) el.textContent = '🟡 Connecting...';
-
-  return fbGet('/sacdb')
-    .then(remote => {
-      if (remote) {
-        DB = ensureArrays(remote);
-        // Restore current user reference from the freshly pulled users list
-        if (currentUser) {
-          const refreshed = DB.users.find(u => u && (u.id === currentUser.id || u.email === currentUser.email));
-          if (refreshed) currentUser = refreshed;
-        }
-        lastKnownDB = JSON.stringify(remote);
-        hasLoadedRemote = true;
-        if (el) el.textContent = '🟢 Connected & pulled latest data';
-      } else {
-        // Remote is null. DO NOT push the local default/empty DB —
-        // doing so would wipe any data that other users might have created.
-        // Only treat as "fresh empty database" if the users list confirms
-        // there is genuinely nothing on Firebase yet.
-        if (!Array.isArray(DB.users) || DB.users.length === 0) {
-          hasLoadedRemote = true; // safe to seed the DB
-          pendingPush = true;
-          if (el) el.textContent = '🟢 Connected (new database)';
-        } else {
-          // Cloud read returned null but users were fetched separately.
-          // Likely a permissions/race issue — refuse to push to avoid wipe.
-          hasLoadedRemote = false;
-          if (el) el.textContent = '🟠 Read returned empty — push blocked for safety';
-        }
-      }
-      startPull();
-    })
-    .catch(e => {
-      // Network/permission failure on pull. Do NOT push — that would wipe cloud.
-      hasLoadedRemote = false;
-      if (el) el.textContent = '🔴 ' + e.message + ' (push blocked)';
-      startPull(); // start polling anyway in case it recovers
-    });
-}
-
-function saveFirebaseUrl() {
-  showToast('Firebase URL is baked into the app config. Edit the source to change it.', 'warn');
-}
-
-async function startPull() {
-  // Cancel any existing timers/listeners
-  if (fbPullTimer) { clearInterval(fbPullTimer); fbPullTimer = null; }
-  if (fbListener) { try { fbListener.close(); } catch(e) {} fbListener = null; }
-  if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
-
-  const url = fbBaseUrl();
-  if (!url) return;
-
-  // ── Try SSE (real-time stream) first ──
-  try {
-    const user = window._fbAuth && window._fbAuth.currentUser;
-    const token = user ? await user.getIdToken() : '';
-    const sseUrl = url + '/sacdb.json' + (token ? '?auth=' + encodeURIComponent(token) : '');
-    const es = new EventSource(sseUrl);
-    es.addEventListener('put', e => {
-      try {
-        const payload = JSON.parse(e.data);
-        const remote = payload.path === '/' ? payload.data : null;
-        if (!remote || !currentUser || isSyncing || isModalOpen()) return;
-        notifyFirebaseUpdate(remote, false);
-        // Preserve any local log entries we made but haven't pushed yet.
-        // Without this, an inbound SSE update would overwrite our just-added
-        // changelog/msgLogs entries before they can be pushed to Firebase.
-        const pendingChangelog = Array.isArray(DB.changelog) ? DB.changelog : [];
-        const pendingMsgLogs   = Array.isArray(DB.msgLogs)   ? DB.msgLogs   : [];
-        DB = ensureArrays(remote);
-        DB.changelog = mergeLogArrays(pendingChangelog, DB.changelog, 500);
-        DB.msgLogs   = mergeLogArrays(pendingMsgLogs,   DB.msgLogs,   200);
-        if (currentUser) { const r = DB.users.find(u => u && u.id === currentUser.id); if (r) currentUser = r; }
-        refreshCurrentPage();
-        const st = document.getElementById('fbStatus');
-        if (st) st.textContent = '🟢 Live — updated ' + new Date().toLocaleTimeString();
-      } catch(ex) { /* ignore parse errors */ }
-    });
-    es.onerror = () => {
-      // SSE failed — fall back to polling
-      try { es.close(); } catch(ex) {}
-      fbListener = null;
-      startPolling(url);
-    };
-    fbListener = es;
-    return;
-  } catch(ex) { /* SSE not supported — fall through to polling */ }
-
-  startPolling(url);
-}
-
-function startPolling(url) {
-  // Poll every 5 seconds as fallback
-  fbPullTimer = setInterval(async () => {
-    if (!currentUser || isSyncing || isModalOpen()) return;
-    try {
-      const remote = await fbGet('/sacdb');
-      if (!remote) return;
-      const oldStr = lastKnownDB;
-      const newStr = JSON.stringify(remote);
-      if (oldStr === newStr) return; // no change
-      notifyFirebaseUpdate(remote, false);
-      // Same protection as the SSE handler — preserve any local log entries
-      // we have added but not yet pushed.
-      const pendingChangelog = Array.isArray(DB.changelog) ? DB.changelog : [];
-      const pendingMsgLogs   = Array.isArray(DB.msgLogs)   ? DB.msgLogs   : [];
-      DB = ensureArrays(remote);
-      DB.changelog = mergeLogArrays(pendingChangelog, DB.changelog, 500);
-      DB.msgLogs   = mergeLogArrays(pendingMsgLogs,   DB.msgLogs,   200);
-      if (currentUser) { const r = DB.users.find(u => u && u.id === currentUser.id); if (r) currentUser = r; }
-      lastKnownDB = newStr;
-      refreshCurrentPage();
-      const st = document.getElementById('fbStatus');
-      if (st) st.textContent = '🟢 Synced — ' + new Date().toLocaleTimeString();
-    } catch(ex) {
-      const st = document.getElementById('fbStatus');
-      if (st) st.textContent = '🟠 Sync error — retrying...';
-    }
-  }, 5000);
-}
-
-function saveLocal() { /* no-op — Firebase is the only store */ }
-
-function scheduleFirebasePush() {
-  // MIGRATION NOTE (Stage A/B): the old whole-blob Firebase push is disabled.
-  // Per-table Supabase writes are added in Stage C. For now, saves update the
-  // in-memory DB and the UI, but are NOT yet persisted to Supabase.
-  pendingPush = true;
-  return;
-}
-
-function _OLD_scheduleFirebasePush() {
-  pendingPush = true;
-  if (!hasLoadedRemote) return;
-  if (pushTimer) clearTimeout(pushTimer);
-  pushTimer = setTimeout(doPush, 800);
-}
-
-function doPush() {
-  if (!fbDb || !currentUser || !pendingPush) return;
-  // Critical safety check: never push until we have a confirmed pull from
-  // Firebase. Otherwise the default empty in-memory DB would wipe the cloud.
-  if (!hasLoadedRemote) {
-    if (pushTimer) clearTimeout(pushTimer);
-    pushTimer = setTimeout(doPush, 1500); // retry after pull completes
-    return;
-  }
-  if (isSyncing) {
-    if (pushTimer) clearTimeout(pushTimer);
-    pushTimer = setTimeout(doPush, 1000);
-    return;
-  }
-  isSyncing = true;
-  pendingPush = false;
-
-  // Before pushing, fetch the latest changelog + msgLogs from Firebase and
-  // merge them into the local DB. This protects log entries written by other
-  // devices in the brief window since our last pull — without the merge, our
-  // upcoming PUT to /sacdb would overwrite them.
-  // We deliberately scope this to append-only log structures only; everything
-  // else uses last-write-wins which is the original behaviour.
-  Promise.all([
-    fbGet('/sacdb/changelog').catch(() => null),
-    fbGet('/sacdb/msgLogs').catch(()  => null)
-  ]).then(([remoteChangelog, remoteMsgLogs]) => {
-    const rcl = Array.isArray(remoteChangelog)
-      ? remoteChangelog
-      : (remoteChangelog && typeof remoteChangelog === 'object' ? Object.values(remoteChangelog) : []);
-    const rml = Array.isArray(remoteMsgLogs)
-      ? remoteMsgLogs
-      : (remoteMsgLogs && typeof remoteMsgLogs === 'object' ? Object.values(remoteMsgLogs) : []);
-    DB.changelog = mergeLogArrays(DB.changelog || [], rcl, 500);
-    DB.msgLogs   = mergeLogArrays(DB.msgLogs   || [], rml, 200);
-
-    const snapshot = JSON.parse(JSON.stringify(DB));
-    if (snapshot.settings) delete snapshot.settings.firebaseApiKey;
-    notifyFirebaseUpdate(snapshot, true);
-    return fbPut('/sacdb', snapshot)
-    .then(() => {
-      DB.settings.lastPush = new Date().toISOString();
-      DB.settings.lastPushBy = currentUser ? currentUser.id : '';
-      lastKnownDB = JSON.stringify(snapshot);
-      const st = document.getElementById('fbStatus');
-      if (st) st.textContent = '🟢 Saved to cloud ' + new Date().toLocaleTimeString();
-      const el = document.getElementById('lastPushInfo');
-      if (el) el.textContent = new Date().toLocaleString() + ' by ' + (currentUser ? currentUser.id : '');
-    })
-    .catch(() => {
-      pendingPush = true;
-      if (pushTimer) clearTimeout(pushTimer);
-      pushTimer = setTimeout(doPush, 3000);
-      const st = document.getElementById('fbStatus');
-      if (st) st.textContent = '🔴 Save failed — retrying...';
-    })
-    .finally(() => {
-      setTimeout(() => { isSyncing = false; }, 1500);
-    });
-  }).catch(err => {
-    // If the merge step itself fails (e.g. transient network blip while
-    // fetching changelog/msgLogs), don't get stuck — release the lock and
-    // queue a retry so the user's data still reaches Firebase.
-    pendingPush = true;
-    isSyncing = false;
-    if (pushTimer) clearTimeout(pushTimer);
-    pushTimer = setTimeout(doPush, 3000);
-    const st = document.getElementById('fbStatus');
-    if (st) st.textContent = '🟠 Sync prep failed — retrying...';
-  });
-}
-
-function pushToFirebase() {
-  if (!fbDb) { showToast('Firebase not connected', 'error'); return; }
-  if (!hasLoadedRemote) {
-    showToast('Cloud data not loaded yet — please wait, then try again.', 'error');
-    return;
-  }
-  confirm_('⬆️', 'Manual Push', 'Push all local data to Firebase now?', () => {
-    isSyncing = true;
-    const snap = JSON.parse(JSON.stringify(DB));
-    if (snap.settings) delete snap.settings.firebaseApiKey;
-    fbPut('/sacdb', snap)
-      .then(() => {
-        DB.settings.lastPush = new Date().toISOString();
-        DB.settings.lastPushBy = currentUser.id;
-        pendingPush = false;
-        lastKnownDB = JSON.stringify(snap);
-        const el = document.getElementById('lastPushInfo');
-        if (el) el.textContent = new Date().toLocaleString() + ' by ' + currentUser.id;
-        showToast('Pushed to Firebase ✓', 'success');
-        addLog('firebase_push', 'Manual push');
-      })
-      .catch(e => showToast('Push failed: ' + e.message, 'error'))
-      .finally(() => { setTimeout(() => { isSyncing = false; }, 1500); });
-  });
-}
-
-function manualPull() {
-  if (!fbDb) { showToast('Firebase not connected', 'error'); return; }
-  fbGet('/sacdb').then(remote => {
-    if (remote) {
-      DB = ensureArrays(remote);
-      lastKnownDB = JSON.stringify(remote);
-      hasLoadedRemote = true; // unblock pushes now that we have real data
-      if (currentUser) {
-        const refreshed = DB.users.find(u => u && u.id === currentUser.id);
-        if (refreshed) currentUser = refreshed;
-      }
-      refreshCurrentPage();
-      showToast('Data pulled from Firebase ✓', 'success');
-    } else {
-      showToast('No data on Firebase', 'error');
-    }
-  }).catch(e => showToast('Pull failed: ' + e.message, 'error'));
-}
-
-// Login: fetch users from Firebase REST using Auth token
-async function fetchUsersForLogin() {
-  // Try /sacdb/users first, then fall back to /users (legacy path)
-  const paths = ['/sacdb/users', '/users'];
-  for (const path of paths) {
-    try {
-      const url = await fbRestUrl(path);
-      const headers = await fbHeaders();
-      const r = await fetch(url, { headers });
-      if (!r.ok) continue;
-      const data = await r.json();
-      if (!data) continue;
-      const arr = Array.isArray(data) ? data : Object.values(data);
-      if (arr.length > 0) return arr;
-    } catch(e) { continue; }
-  }
-  return null;
-}
 
 function isModalOpen() {
   const inputModals = ['modalStudent','modalFee','modalUser','modalAddBatch','modalNote','modalImport'];
@@ -4921,40 +4664,33 @@ function renderStudentList() {
   let html = '';
   const row = (s, isBanned, num) => {
     const isChecked = selectedStudentIds.has(s.id);
+    const att = todayAtt[s.id];
+    const attBadge = att==='P'?'<span class="badge badge-green">✅</span>':att==='A'?'<span class="badge badge-red">❌</span>':'';
     return `
-    <div class="card" style="margin-bottom:4px;padding:8px 10px;${isBanned?'opacity:.65;border-color:#dc262655;':''}${isChecked?'border-color:var(--accent2);background:var(--card2);':''}">
-      <div style="display:flex;align-items:flex-start;gap:8px;">
+    <div class="card" style="margin-bottom:4px;padding:7px 10px;${isBanned?'opacity:.65;border-color:#dc262655;':''}${isChecked?'border-color:var(--accent2);background:var(--card2);':''}">
+      <div style="display:flex;align-items:center;gap:8px;">
         <!-- Checkbox -->
-        <label style="display:flex;align-items:center;padding-top:2px;flex-shrink:0;cursor:pointer;">
+        <label style="display:flex;align-items:center;flex-shrink:0;cursor:pointer;" onclick="event.stopPropagation();">
           <input type="checkbox" class="student-select-cb" data-id="${s.id}"
             ${isChecked?'checked':''}
             onchange="toggleStudentSelect('${s.id}',this)"
             style="width:17px;height:17px;accent-color:var(--accent2);cursor:pointer;flex-shrink:0;">
         </label>
-        <div style="display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;">
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
-              ${s.rollNo ? `<span style="background:var(--accent2);color:#fff;border-radius:50%;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;padding:0 4px;">${s.rollNo}</span>` : ''}
-              <span>${escHtml(s.name)}</span>
-              ${isBanned?'<span class="badge badge-red">Dropout</span>':''}
-              <span class="badge badge-blue">${escHtml(s.batch||'')}</span>
-              ${(()=>{ const v=todayAtt[s.id]; return v==='P'?'<span class="badge badge-green">✅ Present</span>':v==='A'?'<span class="badge badge-red">❌ Absent</span>':''; })()}
-            </div>
-            <div style="font-size:11px;color:var(--gray);margin-top:1px;">
-              ${s.age?'Age: '+s.age:''} ${s.dob?'• DOB: '+s.dob:''}
-            </div>
-            ${s.contact?`<div style="font-size:12px;margin-top:1px;"><a href="tel:${escHtml(s.contact)}" style="color:var(--accent2);">📞 ${s.contact}</a>${s.contact2?` <a href="tel:${escHtml(s.contact2)}" style="color:var(--gray);margin-left:8px;">${s.contact2}</a>`:''}</div>`:''}
-            ${s.parent?`<div style="font-size:11px;color:var(--gray);margin-top:1px;">Parent: ${escHtml(s.parent)}</div>`:''}
-            ${s.address?`<div style="font-size:11px;color:var(--graydk);margin-top:1px;">🏫 ${escHtml(s.address)}</div>`:''}
-            ${s.joinDate?`<div style="font-size:10px;color:var(--graydk);margin-top:1px;">Joined: ${s.joinDate}</div>`:''}
+        <!-- Tappable compact info -->
+        <div style="flex:1;min-width:0;cursor:pointer;" onclick="openStudentDetail('${s.id}')">
+          <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+            ${s.rollNo ? `<span style="background:var(--accent2);color:#fff;border-radius:50%;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;padding:0 4px;">${s.rollNo}</span>` : ''}
+            <span>${escHtml(s.name)}</span>
+            ${isBanned?'<span class="badge badge-red">Dropout</span>':''}
+            <span class="badge badge-blue">${escHtml(s.batch||'')}</span>
+            ${attBadge}
+          </div>
+          <div style="font-size:12px;color:var(--gray);margin-top:2px;display:flex;gap:12px;flex-wrap:wrap;">
+            ${s.contact?`<span>📞 ${escHtml(s.contact)}</span>`:''}
+            ${s.joinDate?`<span style="color:var(--graydk);">📅 ${s.joinDate}</span>`:''}
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
-          <button class="btn btn-primary btn-xs" onclick="openAddStudentModal('${s.id}')">✏️ Edit</button>
-          <button class="btn btn-danger btn-xs" onclick="deleteStudent('${s.id}')">🗑️ Delete</button>
-          ${!isBanned?`<button class="btn btn-warning btn-xs" onclick="banStudent('${s.id}')">🚫 Block</button>`
-            :`<button class="btn btn-success btn-xs" onclick="unbanStudent('${s.id}')">✅ Restore</button>`}
-        </div>
+        <div style="color:var(--graydk);font-size:16px;flex-shrink:0;" onclick="openStudentDetail('${s.id}')">›</div>
       </div>
     </div>`;
   };
@@ -4967,6 +4703,40 @@ function renderStudentList() {
   if (!html) html = `<div class="empty-state">No students found.</div>`;
   document.getElementById('studentListWrap').innerHTML = html;
   updateStudentSelectToolbar();
+}
+
+// Student detail popup — full info + actions
+function openStudentDetail(id) {
+  const s = DB.students.find(x => x.id === id);
+  if (!s) return;
+  const isBanned = !!s.banned;
+  const att = (DB.attendance[todayStr()]||{})[s.id];
+  const attTxt = att==='P'?'✅ Present today':att==='A'?'❌ Absent today':'— Not marked today';
+  const row = (label, val) => val ? `<div style="display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--border);"><span style="color:var(--gray);font-size:12px;">${label}</span><span style="font-size:13px;font-weight:600;text-align:right;">${escHtml(String(val))}</span></div>` : '';
+  document.getElementById('studentDetailBody').innerHTML = `
+    <div style="text-align:center;margin-bottom:12px;">
+      <div style="font-size:18px;font-weight:800;">${escHtml(s.name)}</div>
+      <div style="margin-top:4px;">
+        <span class="badge badge-blue">${escHtml(s.batch||'')}</span>
+        ${s.rollNo?`<span class="badge badge-gold">Roll ${s.rollNo}</span>`:''}
+        ${isBanned?'<span class="badge badge-red">Dropout</span>':''}
+      </div>
+      <div style="font-size:11px;color:var(--gray);margin-top:6px;">${attTxt}</div>
+    </div>
+    ${row('Age', s.age)}
+    ${row('Date of Birth', s.dob)}
+    ${row('Contact 1', s.contact)}
+    ${row('Contact 2', s.contact2)}
+    ${row('Parent / Guardian', s.parent)}
+    ${row('School', s.address)}
+    ${row('Joined', s.joinDate)}
+    <div style="display:flex;gap:6px;margin-top:14px;">
+      <button class="btn btn-primary btn-sm" style="flex:1;" onclick="closeModal('modalStudentDetail');openAddStudentModal('${s.id}')">✏️ Edit</button>
+      ${!isBanned?`<button class="btn btn-warning btn-sm" style="flex:1;" onclick="closeModal('modalStudentDetail');banStudent('${s.id}')">🚫 Block</button>`
+        :`<button class="btn btn-success btn-sm" style="flex:1;" onclick="closeModal('modalStudentDetail');unbanStudent('${s.id}')">✅ Restore</button>`}
+      <button class="btn btn-danger btn-sm" style="flex:1;" onclick="closeModal('modalStudentDetail');deleteStudent('${s.id}')">🗑️ Delete</button>
+    </div>`;
+  openModal('modalStudentDetail');
 }
 
 // ── Bulk Edit ─────────────────────────────────────────────────────
@@ -7113,8 +6883,8 @@ async function renderProfilePage() {
   const dataCard = document.getElementById('dataCard');
   if (dataCard) dataCard.style.display = isAdmin() ? '' : 'none';
 
-
-  document.getElementById('lastPushInfo').textContent = DB.settings.lastPush
+  const lpi = document.getElementById('lastPushInfo');
+  if (lpi) lpi.textContent = DB.settings.lastPush
     ? new Date(DB.settings.lastPush).toLocaleString() + ' by ' + (DB.settings.lastPushBy||'?')
     : 'Never';
   updateLogos();
@@ -7389,7 +7159,7 @@ function renderUserList() {
         </div>
         <div style="display:flex;gap:5px;flex-shrink:0;">
           ${u.role==='staff'?`<button onclick="openAssignBatchModal('${escHtml(u.id)}')" class="btn btn-gold btn-xs">📦 Batch</button>`:''}
-          <button onclick="openEditUser('${escHtml(u.id)}')" class="btn btn-outline btn-xs">✏️ Edit</button>
+          ${u.role==='staff'?`<button onclick="openEditUser('${escHtml(u.id)}')" class="btn btn-outline btn-xs">✏️ Edit</button>`:''}
         </div>
       </div>
       ${u.role==='staff'?`<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
@@ -7484,7 +7254,7 @@ async function saveUser() {
     if (btn) { btn.textContent = 'Creating...'; btn.disabled = true; }
     try {
       const { data, error } = await sb().functions.invoke('create-user', {
-        body: { email, password: pass, name: name||email, role,
+        body: { email, password: pass, name: name||email, role: 'staff',
                 academy_id: acadId(), login_id: uid,
                 assigned_batches: getSelectedBatchAssignments() }
       });
@@ -8454,26 +8224,6 @@ async function takeSnapshotFromSettings() {
   });
 }
 
-function settingsPull() {
-  manualPull();
-  setTimeout(() => {
-    const src = document.getElementById('fbStatus');
-    const dst = document.getElementById('fbStatusModal');
-    if (src && dst) dst.textContent = src.textContent;
-  }, 1800);
-}
-
-function settingsPush() {
-  pushToFirebase();
-  setTimeout(() => {
-    const srcS = document.getElementById('fbStatus');
-    const dstS = document.getElementById('fbStatusModal');
-    if (srcS && dstS) dstS.textContent = srcS.textContent;
-    const srcL = document.getElementById('lastPushInfo');
-    const dstL = document.getElementById('lastPushInfoModal');
-    if (srcL && dstL) dstL.textContent = srcL.textContent;
-  }, 2200);
-}
 </script>
 
 <!-- ============================================================
