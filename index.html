@@ -27,9 +27,16 @@
 
   // ── YOUR SUPABASE CONFIG (anon key is public — RLS protects the data) ──
   const SUPABASE_URL = 'https://qdjejudzxwuujjnqmutg.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFkamVqdWR6eHd1dWpqbnFtdXRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1ODM0NTIsImV4cCI6MjA5NzE1OTQ1Mn0.ERzO_smN_h6OXbD7EFH0mNvMtuczBBtMQXFBx53E1wE';
+  const SUPABASE_ANON_KEY = 'sb_publishable_zNw6KFhEj5CaCdAA_d6u8w_6wQotlgo';
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storageKey: 'sac_supabase_auth'
+    }
+  });
 
   // Expose to global scope so non-module scripts can use it
   window._sb = supabase;
@@ -2515,12 +2522,29 @@ async function doLogin() {
     }
 
     // Step 2: Fetch this user's app profile (role, academy, name) from app_users
-    const authUid = signInData && signInData.user ? signInData.user.id : null;
+    // Wait until the auth session (JWT) is actually available, then query.
+    // Without a valid token the RLS policy sees auth.uid() = null and returns 401/403.
+    let authUid = signInData && signInData.user ? signInData.user.id : null;
+    let haveToken = false;
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        const { data: sess } = await window._sb.auth.getSession();
+        if (sess && sess.session && sess.session.access_token) {
+          authUid = sess.session.user.id;
+          haveToken = true;
+          break;
+        }
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 150)); // wait 150ms and retry
+    }
+    if (!haveToken) console.warn('No access token available after sign-in');
+
     const { data: profile, error: profErr } = await window._sb
       .from('app_users')
       .select('*')
       .eq('id', authUid)
       .single();
+    if (profErr) console.error('app_users lookup error:', profErr);
 
     const user = profile ? {
       id: profile.login_id || profile.email,
