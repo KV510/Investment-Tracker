@@ -137,7 +137,9 @@ input,select,textarea{font-family:var(--font);}
 .content{flex:1;overflow:hidden;position:relative;}
 
 /* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#dfe5ee;border-top:1px solid var(--border);display:flex;z-index:200;height:60px;box-shadow:0 -2px 10px rgba(30,50,90,.06);}
+.bottom-nav{position:fixed;bottom:18px;left:0;right:0;background:#dfe5ee;border-top:1px solid var(--border);display:flex;z-index:200;height:60px;box-shadow:0 -2px 10px rgba(30,50,90,.06);}
+.app-copyright{position:fixed;bottom:0;left:0;right:0;height:18px;line-height:18px;text-align:center;font-size:10px;color:var(--gray);background:#d5dce7;z-index:201;letter-spacing:.2px;}
+body.dark-theme .app-copyright{background:#0a1830;color:#7f93b5;}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--gray);font-size:10px;font-weight:500;transition:all .2s;padding:4px 1px;border:none;background:none;position:relative;}
 .nav-item.active{color:var(--accent2);font-weight:700;}
 .nav-item.active svg{stroke:var(--accent2);}
@@ -157,7 +159,7 @@ input,select,textarea{font-family:var(--font);}
   overflow-y: auto;
   overflow-x: hidden;
   padding: 14px;
-  padding-bottom: 72px;
+  padding-bottom: 90px;
   transform: translateX(100%);
   transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
@@ -440,6 +442,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
          style="margin:10px 0;display:flex;justify-content:center;"></div>
     <button class="btn-login" id="loginBtn" onclick="doLogin()">Sign In to Portal</button>
     <div class="login-support" id="loginSupport"></div>
+    <div style="text-align:center;margin-top:16px;font-size:11px;color:var(--gray);opacity:.8;">© 2026 FeeZo Solutions · v3</div>
   </div>
 </div>
 
@@ -502,7 +505,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
   <div class="content">
 
     <!-- ===== HOME ===== -->
-    <div class="page active" id="pageHome" style="display:flex;flex-direction:column;overflow-y:auto;padding-bottom:72px;">
+    <div class="page active" id="pageHome" style="display:flex;flex-direction:column;overflow-y:auto;padding-bottom:90px;">
       <!-- Dashboard Title + Month/Year Filter -->
       <div style="margin-bottom:12px;">
         <div class="section-title" style="margin-bottom:8px;">📈 Dashboard</div>
@@ -694,7 +697,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         <button class="btn btn-xs btn-outline" onclick="openBulkEditModal()" style="font-size:11px;">✏️ Bulk Edit</button>
       </div>
 
-      <div id="studentListWrap" style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:72px;"></div>
+      <div id="studentListWrap" style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:90px;"></div>
     </div>
 
     <!-- ===== ATTENDANCE ===== -->
@@ -764,7 +767,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
       <select id="attStatusFilter" style="display:none;"><option value="all">All Status</option><option value="present">Present</option><option value="absent">Absent</option></select>
       <div class="batch-chips" id="attBatchChips"></div>
       <div id="attSummaryBar"></div>
-      <div id="attListWrap" style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:72px;"></div>
+      <div id="attListWrap" style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:90px;"></div>
     </div>
 
     <!-- ===== FEES ===== -->
@@ -831,7 +834,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         <input type="text" class="search-input" placeholder="Search student…" id="feeSearch" oninput="renderFees()">
       </div>
       <div class="batch-chips" id="feeBatchChips"></div>
-      <div id="feeListWrap" style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:72px;"></div>
+      <div id="feeListWrap" style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0;padding-bottom:90px;"></div>
     </div>
 
     <!-- ===== ENQUIRY / QUERIES ===== -->
@@ -897,7 +900,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
       </div>
 
       <!-- Log List -->
-      <div id="classLogList" style="padding-bottom:72px;">
+      <div id="classLogList" style="padding-bottom:90px;">
         <div class="empty-state" style="padding:20px;">No class entries yet.</div>
       </div>
     </div>
@@ -1115,6 +1118,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
       <span>Profile</span>
     </button>
   </div>
+  <div class="app-copyright">© 2026 FeeZo Solutions · v3</div>
 </div><!-- end #app -->
 
 <!-- ===== MODALS ===== -->
@@ -2511,7 +2515,7 @@ async function doLogin() {
   }
 
   const rawId = document.getElementById('loginId').value.trim().toLowerCase();
-  const email = rawId.includes('@') ? rawId : rawId + '@silambam.app';
+  const email = rawId.includes('@') ? rawId : rawId + '@gmail.com';
   const pw    = document.getElementById('loginPass').value;
   if (!rawId || !pw) {
     showLoginError('Please enter both User ID and Password.');
