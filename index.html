@@ -6975,43 +6975,60 @@ function importAllData(e) {
   const statusEl = document.getElementById('importDataStatus');
   const reader = new FileReader();
   reader.onload = ev => {
+    let parsed;
     try {
-      const parsed = JSON.parse(ev.target.result);
-      // Basic validation
-      if (!parsed.students || !parsed.settings || !parsed.attendance || !parsed.fees) {
-        throw new Error('Invalid backup file — missing required fields.');
-      }
-      confirm_('⬆️', 'Import Data',
-        'This will REPLACE all current data with the backup. This cannot be undone. Continue?',
-        () => {
-          DB = Object.assign({}, DB, parsed);
-          sbPushFullDB();
-          updateLogos();
-          initDashFilters();
-          initFeeFilters();
-          initAttFilters();
-          renderStudentList();
-          loadDashboard();
-          renderProfilePage();
-          addLog('settings', 'Data restored from backup');
-          if (statusEl) {
-            statusEl.style.display = '';
-            statusEl.style.color = '#4ade80';
-            statusEl.textContent = '✅ Data restored — ' + parsed.students.length + ' students, ' +
-              Object.keys(parsed.attendance).length + ' attendance days, ' +
-              Object.keys(parsed.fees).length + ' fee months.';
-          }
-          showToast('Data restored ✓', 'success');
-        }
-      );
+      parsed = JSON.parse(ev.target.result);
     } catch (err) {
-      if (statusEl) {
-        statusEl.style.display = '';
-        statusEl.style.color = '#f87171';
-        statusEl.textContent = '⚠️ ' + err.message;
-      }
-      showToast('Import failed', 'error');
+      if (statusEl) { statusEl.style.display=''; statusEl.style.color='#f87171'; statusEl.textContent='⚠️ Not a valid JSON file.'; }
+      showToast('Import failed: invalid JSON', 'error');
+      e.target.value = '';
+      return;
     }
+    // Lenient validation — only students + settings are essential
+    if (!parsed.students || !parsed.settings) {
+      if (statusEl) { statusEl.style.display=''; statusEl.style.color='#f87171'; statusEl.textContent='⚠️ Invalid backup — missing students or settings.'; }
+      showToast('Import failed: missing data', 'error');
+      e.target.value = '';
+      return;
+    }
+    confirm_('⬆️', 'Import Data',
+      `Import ${parsed.students.length} students and all related data into Supabase?`,
+      async () => {
+        try {
+          // Merge parsed data into DB, ensuring all arrays/objects exist
+          DB = Object.assign({}, DB, parsed);
+          DB.attendance = DB.attendance || {};
+          DB.fees = DB.fees || {};
+          DB.enquiries = DB.enquiries || [];
+          DB.classLog = DB.classLog || [];
+          DB.batches = DB.batches || [];
+
+          if (statusEl) { statusEl.style.display=''; statusEl.style.color='#888'; statusEl.textContent='⏳ Uploading to Supabase…'; }
+
+          const ok = await sbPushFullDB({ onProgress: (m) => {
+            if (statusEl) statusEl.textContent = '⏳ ' + m;
+          }});
+
+          if (!ok) throw new Error('Upload to Supabase failed — see console for details.');
+
+          updateLogos();
+          initDashFilters(); initFeeFilters(); initAttFilters();
+          renderStudentList(); loadDashboard(); renderProfilePage();
+          addLog('settings', 'Data migrated from backup');
+          if (statusEl) {
+            statusEl.style.color = '#4ade80';
+            statusEl.textContent = '✅ Migrated — ' + (parsed.students.length||0) + ' students, ' +
+              Object.keys(DB.attendance).length + ' attendance days, ' +
+              Object.keys(DB.fees).length + ' fee months.';
+          }
+          showToast('Data migrated ✓', 'success');
+        } catch (err) {
+          console.error('Import/migration error:', err);
+          if (statusEl) { statusEl.style.display=''; statusEl.style.color='#f87171'; statusEl.textContent='⚠️ ' + (err.message||'Migration failed'); }
+          showToast('Import failed: ' + (err.message||'see console'), 'error');
+        }
+      }
+    );
     e.target.value = '';
   };
   reader.readAsText(file);
