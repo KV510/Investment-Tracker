@@ -1405,20 +1405,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
       </div>
     </div>
 
-    <!-- Firebase Sync — ALL users -->
-    <div style="margin-bottom:16px;">
-      <div class="section-title" style="font-size:13px;margin-bottom:8px;">🔥 Firebase Sync</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;background:var(--royal2);border-radius:8px;padding:9px 12px;">
-        <span id="fbStatusModal" style="font-size:12px;color:var(--gray);flex:1;">⚪ Not connected</span>
-      </div>
-      <div style="display:flex;gap:6px;">
-        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="settingsPull()">⬇️ Pull</button>
-        <button class="btn btn-outline btn-sm" style="flex:1;" onclick="settingsPush()">⬆️ Push</button>
-      </div>
-      <div style="font-size:11px;color:var(--gray);margin-top:7px;">
-        Auto-sync: every 2s &nbsp;|&nbsp; Last push: <span id="lastPushInfoModal">Never</span>
-      </div>
-    </div>
+    <!-- Firebase Sync section removed — app now uses Supabase with realtime sync -->
 
     <!-- Admin-only section -->
     <div id="settingsAdminOnly" style="display:none;">
@@ -2155,13 +2142,12 @@ function checkMidnightSnapshot() {
   }
 }
 function takeSnapshotNow() {
-  if (!fbDb) { showToast('Firebase not connected','error'); return; }
   confirm_('📸','Take Snapshot','Save a snapshot of all current data?', async () => {
     const key = await takeSnapshot('manual');
     if (key) {
       showToast('📸 Snapshot saved: '+key,'success');
       addLog('snapshot','Manual snapshot: '+key);
-      await renderSnapshotList(); // refresh from Firebase to show the new snapshot
+      await renderSnapshotList();
     } else {
       showToast('Snapshot failed','error');
     }
@@ -2171,32 +2157,18 @@ async function renderSnapshotList() {
   const wrap = document.getElementById('snapshotListWrap');
   if (!wrap) return;
 
-  // Always fetch the live list directly from Firebase /snapshots/ so manual
-  // snapshots are visible immediately, regardless of DB.snapshotIndex state.
+  // Fetch the live snapshot list from Supabase
   let list = [];
-  if (fbDb) {
-    wrap.innerHTML = '<div class="empty-state" style="padding:14px;">🔄 Loading snapshots…</div>';
-    try {
-      const remote = await fbGet('/snapshots');
-      if (remote && typeof remote === 'object') {
-        // Build list from actual Firebase keys
-        list = Object.keys(remote).map(key => {
-          const snap = remote[key];
-          return {
-            key,
-            time: snap._snapTime || snap.time || new Date().toISOString(),
-            label: snap._snapLabel || snap.label || 'auto'
-          };
-        }).sort((a, b) => b.key.localeCompare(a.key)); // newest first
-
-        // Keep DB.snapshotIndex in sync with what Firebase actually has
-        DB.snapshotIndex = list.map(s => ({ key: s.key, time: s.time, label: s.label }));
-      }
-    } catch (e) {
-      // Fall back to cached index if Firebase read fails
-      list = Array.isArray(DB.snapshotIndex) ? [...DB.snapshotIndex].sort((a,b) => b.key.localeCompare(a.key)) : [];
-    }
-  } else {
+  wrap.innerHTML = '<div class="empty-state" style="padding:14px;">🔄 Loading snapshots…</div>';
+  try {
+    const aid = acadId();
+    const { data, error } = await sb().from('snapshots')
+      .select('snap_key,label,created_at').eq('academy_id', aid)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    list = (data || []).map(s => ({ key: s.snap_key, time: s.created_at, label: s.label || 'auto' }));
+    DB.snapshotIndex = list.map(s => ({ key: s.key, time: s.time, label: s.label }));
+  } catch (e) {
     list = Array.isArray(DB.snapshotIndex) ? [...DB.snapshotIndex].sort((a,b) => b.key.localeCompare(a.key)) : [];
   }
 
@@ -2231,23 +2203,22 @@ function restoreSnapshot(key) {
   confirm_('⚠️','Restore Snapshot',
     'Restore ALL data from '+key+'? Current data will be overwritten.',
     async () => {
-      if (!fbDb) { showToast('Firebase not connected','error'); return; }
       try {
-        const data = await fbGet('/snapshots/' + key);
+        const aid = acadId();
+        const { data: row, error } = await sb().from('snapshots')
+          .select('data').eq('academy_id', aid).eq('snap_key', key).single();
+        if (error) throw error;
+        const data = row && row.data;
         if (!data) { showToast('Snapshot not found','error'); return; }
         const savedIndex  = Array.isArray(DB.snapshotIndex) ? [...DB.snapshotIndex] : [];
         DB = ensureArrays(data);
         DB.snapshotIndex = savedIndex;
-        isSyncing = true; pendingPush = false;
-        const toSave = JSON.parse(JSON.stringify(DB));
-        if (toSave.settings) { delete toSave.settings.firebaseApiKey; }
-        await fbPut('/sacdb', toSave);
-        isSyncing = false;
-        lastKnownDB = JSON.stringify(data);
+        // Write the restored data back to all Supabase tables
+        await sbPushFullDB();
         refreshCurrentPage();
         showToast('✅ Restored from '+key,'success');
         addLog('snapshot','Restored from snapshot '+key);
-      } catch(e) { isSyncing=false; showToast('Restore failed: '+e.message,'error'); }
+      } catch(e) { showToast('Restore failed: '+e.message,'error'); }
     });
 }
 
@@ -2342,6 +2313,7 @@ function addLog(action, detail) {
   };
   DB.changelog.unshift(entry);
   if (DB.changelog.length > 500) DB.changelog.length = 500;
+  if (typeof rtMarkSelfWrite === 'function') rtMarkSelfWrite();
   sbAddAudit(entry); // persist to Supabase audit_log
 }
 
@@ -2782,6 +2754,57 @@ function launchApp() {
   initFeeFilters();
   switchPage('home');
   checkMidnightSnapshot();
+  startRealtimeSync();
+}
+
+// ----------------------------------------------------------------
+// REALTIME SYNC — listen for DB changes and refresh across devices
+// ----------------------------------------------------------------
+let _rtChannel = null;
+let _rtReloadTimer = null;
+let _rtSelfWriteUntil = 0; // brief window to ignore our own echoes
+
+// Call this after we make a local write, so the immediate echo doesn't
+// trigger a redundant full reload.
+function rtMarkSelfWrite() { _rtSelfWriteUntil = Date.now() + 1500; }
+
+function startRealtimeSync() {
+  if (!window._sb || _rtChannel) return;
+  const aid = acadId();
+  if (!aid) return;
+  try {
+    _rtChannel = window._sb
+      .channel('academy-' + aid)
+      .on('postgres_changes',
+        { event: '*', schema: 'public' },
+        (payload) => {
+          // A change happened on some table. If it was very likely our own
+          // write, skip (we already updated locally). Otherwise refresh.
+          if (Date.now() < _rtSelfWriteUntil) return;
+          scheduleRealtimeReload();
+        })
+      .subscribe();
+  } catch (e) {
+    console.warn('Realtime subscribe failed:', e);
+  }
+}
+
+function stopRealtimeSync() {
+  if (_rtChannel) { try { window._sb.removeChannel(_rtChannel); } catch(e){} _rtChannel = null; }
+}
+
+// Debounced: reload all data, then re-render whatever page is showing.
+function scheduleRealtimeReload() {
+  if (_rtReloadTimer) clearTimeout(_rtReloadTimer);
+  _rtReloadTimer = setTimeout(async () => {
+    try {
+      await loadAllData();
+      refreshCurrentPage();
+      // subtle indicator that data updated from another device
+      const dot = document.getElementById('rtSyncDot');
+      if (dot) { dot.style.opacity = '1'; setTimeout(() => { dot.style.opacity = '0'; }, 1200); }
+    } catch (e) { console.warn('Realtime reload failed:', e); }
+  }, 600);
 }
 
 function migrateRollNumbers() {
@@ -2817,6 +2840,8 @@ function migrateRollNumbers() {
 function doLogout() {
   confirm_('🚪','Logout','Are you sure you want to logout?', () => {
     addLog('logout','Logged out');
+    stopRealtimeSync();
+    _appLaunched = false;
     currentUser = null;
     try { localStorage.removeItem('sac_session'); localStorage.removeItem('sac_session_time'); } catch(e) {}
     if (fbPullTimer) { clearInterval(fbPullTimer); fbPullTimer = null; }
@@ -8365,20 +8390,15 @@ async function renderSnapshotListSettings() {
   if (!wrap) return;
   wrap.innerHTML = '<div class="empty-state" style="padding:14px;">🔄 Loading snapshots…</div>';
   let list = [];
-  if (fbDb) {
-    try {
-      const remote = await fbGet('/snapshots');
-      if (remote && typeof remote === 'object') {
-        list = Object.keys(remote).map(key => {
-          const snap = remote[key];
-          return { key, time: snap._snapTime || new Date().toISOString(), label: snap._snapLabel || 'auto' };
-        }).sort((a, b) => b.key.localeCompare(a.key));
-        DB.snapshotIndex = list.map(s => ({ key: s.key, time: s.time, label: s.label }));
-      }
-    } catch(e) {
-      list = Array.isArray(DB.snapshotIndex) ? [...DB.snapshotIndex].sort((a,b) => b.key.localeCompare(a.key)) : [];
-    }
-  } else {
+  try {
+    const aid = acadId();
+    const { data, error } = await sb().from('snapshots')
+      .select('snap_key,label,created_at').eq('academy_id', aid)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    list = (data || []).map(s => ({ key: s.snap_key, time: s.created_at, label: s.label || 'auto' }));
+    DB.snapshotIndex = list.map(s => ({ key: s.key, time: s.time, label: s.label }));
+  } catch(e) {
     list = Array.isArray(DB.snapshotIndex) ? [...DB.snapshotIndex].sort((a,b) => b.key.localeCompare(a.key)) : [];
   }
   if (!list.length) {
@@ -8421,7 +8441,6 @@ async function deleteSnapshotSettings(key) {
 }
 
 async function takeSnapshotFromSettings() {
-  if (!fbDb) { showToast('Firebase not connected', 'error'); return; }
   confirm_('📸', 'Take Snapshot', 'Save a snapshot of all current data?', async () => {
     const key = await takeSnapshot('manual');
     if (key) {
