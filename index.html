@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Meelkazhani Silambam Academy</title>
+<title>FeeZoapp</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Silambam">
+<meta name="apple-mobile-web-app-title" content="FeeZoapp">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
@@ -758,10 +758,16 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         </div>
       </div>
 
-      <!-- Search -->
-      <div class="search-wrap" style="margin-bottom:8px;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" class="search-input" placeholder="Search student by name…" id="attSearch" oninput="renderAttendance()">
+      <!-- Search + Sort -->
+      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;">
+        <div class="search-wrap" style="flex:1;margin-bottom:0;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" class="search-input" placeholder="Search student by name…" id="attSearch" oninput="renderAttendance()">
+        </div>
+        <select id="attSortBy" onchange="renderAttendance()" class="form-select" style="width:auto;flex-shrink:0;font-size:12px;padding:8px 10px;">
+          <option value="roll">Sort: Roll No</option>
+          <option value="name">Sort: Name (A–Z)</option>
+        </select>
       </div>
       <!-- Hidden status filter kept for JS compat -->
       <select id="attStatusFilter" style="display:none;"><option value="all">All Status</option><option value="present">Present</option><option value="absent">Absent</option></select>
@@ -1525,7 +1531,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
 
       <div class="form-group" style="margin-bottom:0;">
         <label class="form-label">Session Notes <span style="font-weight:400;color:var(--gray);">(optional)</span></label>
-        <textarea class="form-input" id="classLogNote" rows="3" placeholder="e.g. Warm-up, Silambam basics, Footwork drills…" style="resize:none;"></textarea>
+        <textarea class="form-input" id="classLogNote" rows="3" placeholder="e.g. Warm-up, basics, drills…" style="resize:none;"></textarea>
       </div>
     </div>
 
@@ -5052,9 +5058,12 @@ function renderAttendance() {
     const dayData = DB.attendance[dateKey] || {};
     const classDay = isClassDay(dateKey);
 
-    // Enrolled (joined on/before) AND active (not yet dropped) on this date — sorted by roll number
+    // Enrolled (joined on/before) AND active (not yet dropped) on this date
+    const _attSort = (document.getElementById('attSortBy')?.value) || 'roll';
     const enrolled = students.filter(s => isEnrolledOnDate(s, y, m, d) && isActiveOnDate(s, y, m, d))
-      .sort((a, b) => (parseInt(a.rollNo)||9999) - (parseInt(b.rollNo)||9999) || a.name.localeCompare(b.name));
+      .sort((a, b) => _attSort === 'name'
+        ? a.name.localeCompare(b.name)
+        : ((parseInt(a.rollNo)||9999) - (parseInt(b.rollNo)||9999) || a.name.localeCompare(b.name)));
 
     // Summary counts
     let pCount=0, aCount=0, lCount=0;
