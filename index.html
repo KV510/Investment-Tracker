@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>test1</title>
+<title>Meelkazhani Silambam Academy</title>
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -1642,6 +1642,7 @@ let DB = {
 };
 
 let currentUser = null;
+let _appLaunched = false; // guard: only auto-launch the app once
 let _currentAcademyId = null;  // set on login — scopes all Supabase queries to this academy
 let currentPage = 'home';
 let editStudId = null;
@@ -2595,6 +2596,7 @@ async function doLogin() {
     loadAllData().then(() => {
       finishLoadProgress(() => {
         if (overlay) overlay.classList.remove('active');
+        _appLaunched = true; // prevent the auth listener from re-launching
         updateLogos();  // refresh logo now that settings loaded
         applyAcadSettings();  // refresh academy name/tagline now that settings loaded
         addLog('login', 'Logged in');
@@ -7982,6 +7984,9 @@ setInterval(() => {
   if (!window._onAuthStateChanged) { setTimeout(waitForAuth, 100); return; }
   window._onAuthStateChanged(async (firebaseUser) => {
     if (!firebaseUser) return; // not signed in — stay on login screen
+    // Supabase fires this on token refresh / tab focus too. Only launch once;
+    // ignore later events if the app is already running.
+    if (_appLaunched || currentUser) return;
     // Check session timeout
     try {
       const lastActive = parseInt(localStorage.getItem('sac_session_time') || '0', 10);
@@ -7993,6 +7998,7 @@ setInterval(() => {
     } catch(e) {}
     // Signed in — fetch app user profile from Supabase and launch
     try {
+      _appLaunched = true;
       const { data: profile } = await window._sb
         .from('app_users').select('*').eq('id', firebaseUser.id).single();
       const user = profile ? {
