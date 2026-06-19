@@ -742,6 +742,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         <div style="display:flex;gap:5px;align-items:center;">
           <button class="btn btn-gold btn-sm" onclick="downloadAttendance('pdf')">PDF</button>
           <button class="btn btn-success btn-sm" onclick="downloadAttendance('xl')">XL</button>
+          <button class="btn btn-outline btn-sm" onclick="openAttImportModal()" title="Import attendance from CSV/Excel">⬆️ Import</button>
           <button onclick="openAttChart()" title="Attendance chart" aria-label="Attendance chart"
             style="width:32px;height:32px;border-radius:9px;background:var(--accent2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.15);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
@@ -833,6 +834,7 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
         <div style="display:flex;gap:5px;align-items:center;">
           <button class="btn btn-gold btn-sm" onclick="downloadFees('pdf')">PDF</button>
           <button class="btn btn-success btn-sm" onclick="downloadFees('xl')">XL</button>
+          <button class="btn btn-outline btn-sm" onclick="openFeeImportModal()" title="Import fees from CSV/Excel">⬆️ Import</button>
           <button onclick="openFeeChart()" title="Fees chart" aria-label="Fees chart"
             style="width:32px;height:32px;border-radius:9px;background:var(--accent2);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.15);">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
@@ -1284,6 +1286,63 @@ body { font-family: 'Poppins', 'Segoe UI', 'Noto Sans', Roboto, 'Arial Unicode M
       </div>
     </div>
     <div id="importError" style="display:none;color:#f87171;font-size:12px;padding:8px;background:#f8717120;border-radius:6px;"></div>
+  </div>
+</div>
+
+<!-- ATTENDANCE IMPORT -->
+<div class="modal-overlay" id="modalAttImport">
+  <div class="modal">
+    <div class="modal-title">⬆️ Import Attendance<button class="modal-close" onclick="closeModal('modalAttImport')">×</button></div>
+    <div style="background:var(--card2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--gray);line-height:1.7;">
+      <div style="font-weight:700;color:var(--gold);margin-bottom:6px;">📋 Required CSV/Excel format:</div>
+      <div style="font-family:monospace;font-size:11px;background:var(--royal);padding:8px;border-radius:6px;margin-bottom:8px;overflow-x:auto;white-space:nowrap;">Name, RollNo, Sport, Date, Status</div>
+      <div>• <b>Name</b> or <b>RollNo</b> is required to identify the student.</div>
+      <div>• <b>Date</b> format: <b>DD/MM/YYYY</b> (e.g. 15/06/2025)</div>
+      <div>• <b>Status</b>: <b>P</b> for Present, <b>A</b> for Absent</div>
+      <div>• First row treated as header and skipped.</div>
+    </div>
+    <input type="file" id="attImportFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleAttImportFile(event)">
+    <button class="btn btn-gold" style="width:100%;padding:12px;margin-bottom:8px;" onclick="downloadAttImportTemplate()">📄 Download Excel Template</button>
+    <button class="btn btn-outline" style="width:100%;padding:12px;margin-bottom:10px;" onclick="document.getElementById('attImportFileInput').click()">📂 Choose CSV or Excel File</button>
+    <div id="attImportPreview" style="display:none;">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;" id="attImportPreviewLabel"></div>
+      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;" id="attImportPreviewList"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('attImportFileInput').click()">🔄 Change File</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="confirmAttImport()">✅ Import All</button>
+      </div>
+    </div>
+    <div id="attImportError" style="display:none;color:#f87171;font-size:12px;padding:8px;background:#f8717120;border-radius:6px;"></div>
+  </div>
+</div>
+
+<!-- FEE IMPORT -->
+<div class="modal-overlay" id="modalFeeImport">
+  <div class="modal">
+    <div class="modal-title">⬆️ Import Fees<button class="modal-close" onclick="closeModal('modalFeeImport')">×</button></div>
+    <div style="background:var(--card2);border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--gray);line-height:1.7;">
+      <div style="font-weight:700;color:var(--gold);margin-bottom:6px;">📋 Required CSV/Excel format:</div>
+      <div style="font-family:monospace;font-size:11px;background:var(--royal);padding:8px;border-radius:6px;margin-bottom:8px;overflow-x:auto;white-space:nowrap;">Name, RollNo, Sport, Month, Status, Amount, Method, PaidDate</div>
+      <div>• <b>Name</b> or <b>RollNo</b> required to identify the student.</div>
+      <div>• <b>Month</b> format: <b>YYYY-MM</b> (e.g. 2025-06)</div>
+      <div>• <b>Status</b>: <b>paid</b> or <b>unpaid</b></div>
+      <div>• <b>Amount</b>: number (e.g. 1500). Optional.</div>
+      <div>• <b>Method</b>: Cash / UPI / Card etc. Optional.</div>
+      <div>• <b>PaidDate</b>: <b>DD/MM/YYYY</b>. Optional.</div>
+      <div>• First row treated as header and skipped.</div>
+    </div>
+    <input type="file" id="feeImportFileInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFeeImportFile(event)">
+    <button class="btn btn-gold" style="width:100%;padding:12px;margin-bottom:8px;" onclick="downloadFeeImportTemplate()">📄 Download Excel Template</button>
+    <button class="btn btn-outline" style="width:100%;padding:12px;margin-bottom:10px;" onclick="document.getElementById('feeImportFileInput').click()">📂 Choose CSV or Excel File</button>
+    <div id="feeImportPreview" style="display:none;">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px;" id="feeImportPreviewLabel"></div>
+      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;" id="feeImportPreviewList"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="document.getElementById('feeImportFileInput').click()">🔄 Change File</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="confirmFeeImport()">✅ Import All</button>
+      </div>
+    </div>
+    <div id="feeImportError" style="display:none;color:#f87171;font-size:12px;padding:8px;background:#f8717120;border-radius:6px;"></div>
   </div>
 </div>
 
@@ -4100,7 +4159,7 @@ function scheduleFirebasePush() { /* no-op: writes go directly to Supabase */ }
 
 
 function isModalOpen() {
-  const inputModals = ['modalStudent','modalFee','modalUser','modalAddBatch','modalNote','modalImport'];
+  const inputModals = ['modalStudent','modalFee','modalUser','modalAddBatch','modalNote','modalImport','modalAttImport','modalFeeImport'];
   return inputModals.some(id => {
     const el = document.getElementById(id);
     return el && el.classList.contains('active');
@@ -4828,6 +4887,379 @@ function confirmImport() {
     showToast(added + ' student(s) imported ✓', 'success');
     if (skipped > 0)
       setTimeout(() => showToast(skipped + ' duplicate(s) skipped', 'warn'), 1200);
+  });
+}
+
+// =====================================================================
+// ATTENDANCE BULK IMPORT
+// =====================================================================
+let attImportRows = [];
+
+function openAttImportModal() {
+  attImportRows = [];
+  document.getElementById('attImportPreview').style.display = 'none';
+  document.getElementById('attImportError').style.display = 'none';
+  document.getElementById('attImportFileInput').value = '';
+  openModal('modalAttImport');
+}
+
+function downloadAttImportTemplate() {
+  try {
+    const headers = ['Name','RollNo','Sport','Date','Status'];
+    const today = todayDisplay();
+    const sp = (DB.sports && DB.sports[0]) || 'Sport A';
+    const s1 = DB.students[0] || {};
+    const s2 = DB.students[1] || {};
+    const ex1 = [s1.name||'Arjun Kumar',  s1.rollNo||1,  s1.sport||sp, today, 'P'];
+    const ex2 = [s2.name||'Divya Sharma', s2.rollNo||2,  s2.sport||sp, today, 'A'];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ex1, ex2]);
+    ws['!cols'] = [{wch:20},{wch:8},{wch:14},{wch:14},{wch:8}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+
+    const instr = [
+      ['HOW TO USE THIS TEMPLATE'],[''],
+      ['1. Fill one row per student per date in the "Attendance" sheet.'],
+      ['2. DELETE the two example rows before importing.'],
+      ['3. Name or RollNo is required to find the student.'],[''],
+      ['COLUMN GUIDE'],
+      ['Name',    'Full name of the student (used to look up in the app).'],
+      ['RollNo',  'Roll number. Used as fallback if Name is blank.'],
+      ['Sport',   'Sport name (must match a sport in the app).'],
+      ['Date',    'DD/MM/YYYY — e.g. 15/06/2025'],
+      ['Status',  'P = Present   A = Absent'],
+    ];
+    const wsI = XLSX.utils.aoa_to_sheet(instr);
+    wsI['!cols'] = [{wch:12},{wch:60}];
+    XLSX.utils.book_append_sheet(wb, wsI, 'Instructions');
+
+    XLSX.writeFile(wb, 'Attendance_Import_Template.xlsx');
+    showToast('Template downloaded ✓', 'success');
+  } catch(e) {
+    showToast('Could not generate template: ' + e.message, 'error');
+  }
+}
+
+function showAttImportError(msg) {
+  const el = document.getElementById('attImportError');
+  el.textContent = '⚠️ ' + msg;
+  el.style.display = '';
+  document.getElementById('attImportPreview').style.display = 'none';
+}
+
+function handleAttImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('attImportError').style.display = 'none';
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    const reader = new FileReader();
+    reader.onload = ev => parseAttImportCSV(ev.target.result);
+    reader.readAsText(file);
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        parseAttImportCSV(XLSX.utils.sheet_to_csv(ws));
+      } catch(err) { showAttImportError('Could not read Excel file: ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    showAttImportError('Please choose a .csv, .xlsx or .xls file.');
+  }
+}
+
+const ATT_IMPORT_HEADER_MAP = {
+  'name':'name','studentname':'name','fullname':'name',
+  'rollno':'rollNo','roll':'rollNo','rollnumber':'rollNo','no':'rollNo','sno':'rollNo',
+  'sport':'sport','game':'sport','discipline':'sport',
+  'date':'date','attendancedate':'date','classdate':'date',
+  'status':'status','attendance':'status','present':'status','mark':'status',
+};
+
+function parseAttImportCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { showAttImportError('File must have a header row and at least one data row.'); return; }
+
+  const headerCols = parseCSVLine(lines[0]);
+  const colMap = {};
+  headerCols.forEach((h, i) => {
+    const key = ATT_IMPORT_HEADER_MAP[normHeader(h)];
+    if (key && !(key in colMap)) colMap[key] = i;
+  });
+
+  if (colMap['date'] === undefined) { showAttImportError('Could not find a "Date" column.'); return; }
+  if (colMap['status'] === undefined) { showAttImportError('Could not find a "Status" column.'); return; }
+  if (colMap['name'] === undefined && colMap['rollNo'] === undefined) {
+    showAttImportError('Could not find a "Name" or "RollNo" column.'); return;
+  }
+
+  const errors = [];
+  attImportRows = lines.slice(1).map((line, li) => {
+    const cols = parseCSVLine(line);
+    const get = key => colMap[key] !== undefined ? (cols[colMap[key]] || '').trim() : '';
+    const rawName = get('name');
+    const rawRoll = get('rollNo');
+    const rawDate = excelDateToDisplay(get('date'));
+    const rawStatus = get('status').toUpperCase();
+    const rawSport = get('sport');
+
+    // Resolve student
+    let student = null;
+    if (rawRoll) student = DB.students.find(s => String(s.rollNo) === String(parseInt(rawRoll)));
+    if (!student && rawName) student = DB.students.find(s => s.name.toLowerCase() === rawName.toLowerCase());
+    if (!student) { errors.push(`Row ${li+2}: Student "${rawName||rawRoll}" not found — skipped.`); return null; }
+
+    // Parse date DD/MM/YYYY → YYYY-MM-DD
+    const dateParts = rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (!dateParts) { errors.push(`Row ${li+2}: Invalid date "${get('date')}" — skipped.`); return null; }
+    const dateKey = `${dateParts[3]}-${pad(parseInt(dateParts[2]))}-${pad(parseInt(dateParts[1]))}`;
+
+    const status = rawStatus === 'P' || rawStatus === 'PRESENT' ? 'P'
+                 : rawStatus === 'A' || rawStatus === 'ABSENT'  ? 'A' : null;
+    if (!status) { errors.push(`Row ${li+2}: Status "${get('status')}" must be P or A — skipped.`); return null; }
+
+    // Resolve sport
+    const sid = student._sid || student.id;
+    let sport = rawSport
+      ? ((DB.sports||[]).find(sp => sp.toLowerCase() === rawSport.toLowerCase()) || rawSport)
+      : (studentSingleSport(sid) || (DB.sports&&DB.sports[0]) || '');
+
+    return { student, sid, dateKey, status, sport, displayDate: rawDate };
+  }).filter(Boolean);
+
+  if (errors.length) console.warn('Attendance import warnings:', errors);
+  if (!attImportRows.length) { showAttImportError('No valid rows found. ' + (errors[0]||'')); return; }
+
+  // Show preview
+  document.getElementById('attImportPreviewLabel').textContent =
+    attImportRows.length + ' record' + (attImportRows.length !== 1 ? 's' : '') + ' ready to import' +
+    (errors.length ? ` (${errors.length} skipped)` : '') + ':';
+  document.getElementById('attImportPreviewList').innerHTML = attImportRows.map((r, i) =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;">
+      <span style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--gold);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</span>
+      <div style="flex:1;">
+        <div style="font-weight:700;">${escHtml(r.student.name)}</div>
+        <div style="color:var(--gray);">${escHtml(r.displayDate)} · ${escHtml(r.sport)} · <span style="color:${r.status==='P'?'var(--green)':'var(--red)'};">${r.status==='P'?'Present':'Absent'}</span></div>
+      </div>
+    </div>`
+  ).join('');
+  document.getElementById('attImportPreview').style.display = '';
+  document.getElementById('attImportError').style.display = 'none';
+}
+
+function confirmAttImport() {
+  if (!attImportRows.length) return;
+  confirm_('⬆️', 'Import Attendance', `Import ${attImportRows.length} attendance record(s)?`, () => {
+    const markedBy = currentUser ? (currentUser.name || currentUser.id) : '';
+    attImportRows.forEach(r => {
+      attSet(r.dateKey, r.sid, r.status, r.sport);
+      sbSetAttendance(r.sid, r.dateKey, r.status, markedBy, r.sport);
+    });
+    addLog('attendance_import', `Bulk imported ${attImportRows.length} attendance record(s)`);
+    closeModal('modalAttImport');
+    renderAttendance();
+    showToast(attImportRows.length + ' attendance record(s) imported ✓', 'success');
+  });
+}
+
+// =====================================================================
+// FEE BULK IMPORT
+// =====================================================================
+let feeImportRows = [];
+
+function openFeeImportModal() {
+  feeImportRows = [];
+  document.getElementById('feeImportPreview').style.display = 'none';
+  document.getElementById('feeImportError').style.display = 'none';
+  document.getElementById('feeImportFileInput').value = '';
+  openModal('modalFeeImport');
+}
+
+function downloadFeeImportTemplate() {
+  try {
+    const headers = ['Name','RollNo','Sport','Month','Status','Amount','Method','PaidDate'];
+    const sp = (DB.sports && DB.sports[0]) || 'Sport A';
+    const s1 = DB.students[0] || {};
+    const s2 = DB.students[1] || {};
+    const thisMonth = (()=>{ const n=new Date(); return n.getFullYear()+'-'+pad(n.getMonth()+1); })();
+    const ex1 = [s1.name||'Arjun Kumar',  s1.rollNo||1, s1.sport||sp, thisMonth, 'paid',   1500, 'Cash', todayDisplay()];
+    const ex2 = [s2.name||'Divya Sharma', s2.rollNo||2, s2.sport||sp, thisMonth, 'unpaid', '',   '',     ''];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ex1, ex2]);
+    ws['!cols'] = [{wch:20},{wch:8},{wch:14},{wch:10},{wch:8},{wch:8},{wch:10},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Fees');
+
+    const instr = [
+      ['HOW TO USE THIS TEMPLATE'],[''],
+      ['1. Fill one row per student per month in the "Fees" sheet.'],
+      ['2. DELETE the two example rows before importing.'],
+      ['3. Name or RollNo is required to find the student.'],[''],
+      ['COLUMN GUIDE'],
+      ['Name',     'Full name of the student.'],
+      ['RollNo',   'Roll number — used as fallback if Name is blank.'],
+      ['Sport',    'Sport name (must match a sport in the app).'],
+      ['Month',    'YYYY-MM format — e.g. 2025-06'],
+      ['Status',   'paid   or   unpaid'],
+      ['Amount',   'Fee amount as a number — e.g. 1500. Leave blank to keep existing.'],
+      ['Method',   'Cash / UPI / Card / Cheque / Online etc.'],
+      ['PaidDate', 'DD/MM/YYYY — date payment was received. Optional.'],
+    ];
+    const wsI = XLSX.utils.aoa_to_sheet(instr);
+    wsI['!cols'] = [{wch:12},{wch:60}];
+    XLSX.utils.book_append_sheet(wb, wsI, 'Instructions');
+
+    XLSX.writeFile(wb, 'Fee_Import_Template.xlsx');
+    showToast('Template downloaded ✓', 'success');
+  } catch(e) {
+    showToast('Could not generate template: ' + e.message, 'error');
+  }
+}
+
+function showFeeImportError(msg) {
+  const el = document.getElementById('feeImportError');
+  el.textContent = '⚠️ ' + msg;
+  el.style.display = '';
+  document.getElementById('feeImportPreview').style.display = 'none';
+}
+
+function handleFeeImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('feeImportError').style.display = 'none';
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (ext === 'csv') {
+    const reader = new FileReader();
+    reader.onload = ev => parseFeeImportCSV(ev.target.result);
+    reader.readAsText(file);
+  } else if (ext === 'xlsx' || ext === 'xls') {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        parseFeeImportCSV(XLSX.utils.sheet_to_csv(ws));
+      } catch(err) { showFeeImportError('Could not read Excel file: ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  } else {
+    showFeeImportError('Please choose a .csv, .xlsx or .xls file.');
+  }
+}
+
+const FEE_IMPORT_HEADER_MAP = {
+  'name':'name','studentname':'name','fullname':'name',
+  'rollno':'rollNo','roll':'rollNo','rollnumber':'rollNo','no':'rollNo','sno':'rollNo',
+  'sport':'sport','game':'sport',
+  'month':'month','feemonth':'month','period':'month',
+  'status':'status','feestatus':'status','paymentstatus':'status',
+  'amount':'amount','feeamount':'amount','fees':'amount',
+  'method':'method','paymentmethod':'method','mode':'method','paymentmode':'method',
+  'paiddate':'paidDate','datepaid':'paidDate','paymentdate':'paidDate','date':'paidDate',
+};
+
+function parseFeeImportCSV(text) {
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) { showFeeImportError('File must have a header row and at least one data row.'); return; }
+
+  const headerCols = parseCSVLine(lines[0]);
+  const colMap = {};
+  headerCols.forEach((h, i) => {
+    const key = FEE_IMPORT_HEADER_MAP[normHeader(h)];
+    if (key && !(key in colMap)) colMap[key] = i;
+  });
+
+  if (colMap['month'] === undefined) { showFeeImportError('Could not find a "Month" column (format: YYYY-MM).'); return; }
+  if (colMap['status'] === undefined) { showFeeImportError('Could not find a "Status" column (paid/unpaid).'); return; }
+  if (colMap['name'] === undefined && colMap['rollNo'] === undefined) {
+    showFeeImportError('Could not find a "Name" or "RollNo" column.'); return;
+  }
+
+  const errors = [];
+  feeImportRows = lines.slice(1).map((line, li) => {
+    const cols = parseCSVLine(line);
+    const get = key => colMap[key] !== undefined ? (cols[colMap[key]] || '').trim() : '';
+    const rawName   = get('name');
+    const rawRoll   = get('rollNo');
+    const rawMonth  = get('month').trim();   // YYYY-MM
+    const rawStatus = get('status').toLowerCase();
+    const rawAmount = get('amount');
+    const rawMethod = get('method');
+    const rawPaid   = excelDateToDisplay(get('paidDate'));
+    const rawSport  = get('sport');
+
+    // Validate month YYYY-MM
+    if (!/^\d{4}-\d{2}$/.test(rawMonth)) {
+      errors.push(`Row ${li+2}: Invalid month "${rawMonth}" — use YYYY-MM format. Skipped.`); return null;
+    }
+
+    // Resolve student
+    let student = null;
+    if (rawRoll) student = DB.students.find(s => String(s.rollNo) === String(parseInt(rawRoll)));
+    if (!student && rawName) student = DB.students.find(s => s.name.toLowerCase() === rawName.toLowerCase());
+    if (!student) { errors.push(`Row ${li+2}: Student "${rawName||rawRoll}" not found — skipped.`); return null; }
+
+    const status = (rawStatus === 'paid') ? 'paid' : (rawStatus === 'unpaid') ? 'unpaid' : null;
+    if (!status) { errors.push(`Row ${li+2}: Status "${get('status')}" must be "paid" or "unpaid" — skipped.`); return null; }
+
+    const sid = student._sid || student.id;
+    let sport = rawSport
+      ? ((DB.sports||[]).find(sp => sp.toLowerCase() === rawSport.toLowerCase()) || rawSport)
+      : (studentSingleSport(sid) || (DB.sports&&DB.sports[0]) || '');
+
+    // Parse paidDate DD/MM/YYYY → ISO
+    let paidDateIso = '';
+    if (rawPaid) {
+      const dp = rawPaid.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (dp) paidDateIso = `${dp[3]}-${pad(parseInt(dp[2]))}-${pad(parseInt(dp[1]))}T00:00:00.000Z`;
+    }
+
+    const feeObj = {
+      status,
+      amount: rawAmount ? (parseFloat(rawAmount) || null) : null,
+      method: rawMethod || '',
+      date: paidDateIso || (status === 'paid' ? new Date().toISOString() : ''),
+      by: currentUser ? (currentUser.name || currentUser.id) : '',
+      msgSent: []
+    };
+
+    return { student, sid, monthKey: rawMonth, sport, feeObj, displayMonth: rawMonth };
+  }).filter(Boolean);
+
+  if (errors.length) console.warn('Fee import warnings:', errors);
+  if (!feeImportRows.length) { showFeeImportError('No valid rows found. ' + (errors[0]||'')); return; }
+
+  document.getElementById('feeImportPreviewLabel').textContent =
+    feeImportRows.length + ' record' + (feeImportRows.length !== 1 ? 's' : '') + ' ready to import' +
+    (errors.length ? ` (${errors.length} skipped)` : '') + ':';
+  document.getElementById('feeImportPreviewList').innerHTML = feeImportRows.map((r, i) =>
+    `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px;">
+      <span style="width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--gold);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${i+1}</span>
+      <div style="flex:1;">
+        <div style="font-weight:700;">${escHtml(r.student.name)}</div>
+        <div style="color:var(--gray);">${escHtml(r.displayMonth)} · ${escHtml(r.sport)} · <span style="color:${r.feeObj.status==='paid'?'var(--green)':'var(--red)'};">${r.feeObj.status}</span>${r.feeObj.amount?' · ₹'+r.feeObj.amount:''}</div>
+      </div>
+    </div>`
+  ).join('');
+  document.getElementById('feeImportPreview').style.display = '';
+  document.getElementById('feeImportError').style.display = 'none';
+}
+
+function confirmFeeImport() {
+  if (!feeImportRows.length) return;
+  confirm_('⬆️', 'Import Fees', `Import ${feeImportRows.length} fee record(s)?`, () => {
+    feeImportRows.forEach(r => {
+      feeSet(r.monthKey, r.sid, r.feeObj, r.sport);
+      sbSetFee(r.sid, r.monthKey, r.feeObj, r.sport);
+    });
+    addLog('fee_import', `Bulk imported ${feeImportRows.length} fee record(s)`);
+    closeModal('modalFeeImport');
+    renderFees();
+    showToast(feeImportRows.length + ' fee record(s) imported ✓', 'success');
   });
 }
 
@@ -5590,14 +6022,37 @@ function _markAttendanceFor(sid, dateKey, status, sp) {
 
   // Register CLOSED (Done) — locked rules
   if (done) {
-    // Already-marked students are locked, no changes
-    if (existing === 'P' || existing === 'A') {
+    // Already-marked students are locked, except latecomers (P) can be changed to Absent
+    if (existing === 'A') {
       showToast('Register is closed for this day — already marked, cannot change.', 'warn');
       return;
     }
-    // Unmarked: only Present (latecomer) allowed, no Absent
+    if (existing === 'P' && status === 'A') {
+      const late = isLatecomer(dateKey, sid, sp);
+      if (!late) {
+        showToast('Register is closed for this day — already marked, cannot change.', 'warn');
+        return;
+      }
+      confirm_('🔄', 'Change Latecomer to Absent', `Change ${name} from Latecomer → Absent (${sp}) on ${dateKey}?`, () => {
+        attSet(dateKey, sid, 'A', sp);
+        sbSetAttendance(sid, dateKey, 'A', currentUser ? (currentUser.name||currentUser.id) : '', sp);
+        addLog('attendance', `${name} → Absent from latecomer (${sp}) on ${dateKey}`);
+        renderAttendance();
+      });
+      return;
+    }
+    if (existing === 'P') {
+      showToast('Register is closed for this day — already marked, cannot change.', 'warn');
+      return;
+    }
+    // Unmarked: Present (latecomer) or Absent allowed
     if (status === 'A') {
-      showToast('Register is closed — only latecomers (Present) can be added.', 'warn');
+      confirm_('🔴', 'Mark Absent', `Mark ${name} as Absent (${sp}) on ${dateKey}?`, () => {
+        attSet(dateKey, sid, 'A', sp);
+        sbSetAttendance(sid, dateKey, 'A', currentUser ? (currentUser.name||currentUser.id) : '', sp);
+        addLog('attendance', `${name} → Absent (${sp}) on ${dateKey} [after register closed]`);
+        renderAttendance();
+      });
       return;
     }
     // Mark as a latecomer (Present, shown orange)
